@@ -1,4 +1,5 @@
 from typing import Union
+import threading
 
 
 class Package:
@@ -99,14 +100,30 @@ class TimePriorityQueue:
 
 
 class Module:
-    def __init__(self, name, input_queue, output_queue, max_queue_length=None):
+    def __init__(self, name, max_queue_length=None):
         self.name: str = name
-        self.input_queue: TimePriorityQueue = input_queue
-        self.output_queue: TimePriorityQueue = output_queue
-        self.max_queue_length =max_queue_length
-        if  self.max_queue_length != None and output_queue != None:
-            self.output_queue.set_max_count(max_queue_length)
+        self.input_queue: TimePriorityQueue = None
+        self.output_queue: TimePriorityQueue = None
+
+        self.input_lock = None
+        self.output_lock = None
+
+        self.max_queue_length = max_queue_length
         self._is_running = False
+
+    def set_input_lock(self, lock: threading.Lock):
+        self.input_lock = lock
+
+    def set_output_lock(self, lock:  threading.Lock):
+        self.output_lock = lock
+
+    def set_input_queue(self, input_queue: TimePriorityQueue):
+        self.input_queue = input_queue
+
+    def set_output_queue(self, output_queue: TimePriorityQueue):
+        self.output_queue = output_queue
+        if self.max_queue_length != None and output_queue != None:
+            self.output_queue.set_max_count(self.max_queue_length)
 
     def run(self):
         return NotImplementedError
