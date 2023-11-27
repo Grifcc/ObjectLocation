@@ -4,3 +4,4 @@ from .preprocess import PreProcess
 from .filter import Filter
 from .sink import Sink
 from .location import Location
+from .pipeline import Pipeline
