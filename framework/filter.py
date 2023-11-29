@@ -8,7 +8,7 @@ class Filter(Module):
         self.max_queue_length = max_queue_length
         self.time_slice = time_slice
 
-    def process(self, packages: list[Package]) -> Package:
+    def process(self, packages: list[Package]):
         return NotImplementedError
 
     def run(self):
