@@ -1,5 +1,5 @@
-from framework import Sink
 from framework import Package
+from framework import Sink
 import requests
 import time
 
@@ -27,6 +27,3 @@ class HttpSink(Sink):
                 time.sleep(0.5)
 
         raise TimeoutError("Max retries exceeded")
-
-    def __str__(self):
-        return "HttpSink: " + self.name + " " + self.url

@@ -129,29 +129,5 @@ class Module:
     def run(self):
         return NotImplementedError
 
-
-if __name__ == "__main__":
-    packages = []
-    import random
-    for i in range(100):
-        package = Package(i)
-        packages.append(package)
-
-    random.shuffle(packages)
-    queue = TimePriorityQueue(50)
-    for package in packages:
-        print(package.time)
-        if queue.push(package) > 0:
-            print("push success")
-        else:
-            print("push fail")
-
-    x = queue.get_time_slice(10)
-    for i in x:
-        print(i)
-    print("===")
-    for i in queue:
-        print(i)
-    print("==123=")
-    for i in queue:
-        print(i)
+    def __str__(self):
+        return  self.name
