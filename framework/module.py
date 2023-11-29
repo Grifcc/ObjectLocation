@@ -41,15 +41,16 @@ class TimePriorityQueue:
         return self.max_count and self.__len__() >= self.max_count
 
     def push(self, package: Package):
-        if self.is_empty():
-            self._queue.append(package)
-            return 1
         if self.max_count and self.__len__() >= self.max_count:
             return -1
-        for idx, val in enumerate(self._queue):
-            if val.time > package.time:
+        idx =0
+        while idx < self.__len__():
+            if self._queue[idx].time > package.time:
                 self._queue.insert(idx, package)
-                return 1
+                break
+            idx += 1
+        if idx == self.__len__():
+            self._queue.append(package)
 
     def pop(self):
         if self.is_empty():
