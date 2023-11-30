@@ -1,7 +1,7 @@
 from typing import Union
 import threading
 
-
+# package包
 class Package:
     def __init__(self, time):
 
@@ -9,7 +9,9 @@ class Package:
         # read only
         self.time = time
         self.uav_id: int = None
-        self.camera_pose: list[float] = []
+        self.camera_pose: list[float] = [] # [yaw,pitch,roll,x,y,z]
+        self.camera_K: list[float] = [] # [fx,fy,cx,cy]
+        self.camera_distortion: list[float] = [] #[k1,k2,p1,p2]
         self.Bbox: list[int] = []
         self.class_id: int = None
         self.class_name: str = None
@@ -22,21 +24,22 @@ class Package:
         self.location: list[float] = []
 
     def get_center_point(self) -> list[float]:
-        return [(self.Bbox[0]+self.Bbox[2])/2, (self.Bbox[1]+self.Bbox[3])/2]
+        return [(self.Bbox[0]+self.Bbox[2])/2, (self.Bbox[1]+self.Bbox[3])/2] # TODO 有错误
 
     def __str__(self):
         return f"time:{self.time}"
 
-
+# 基于时间优先级的队列
 class TimePriorityQueue:
     def __init__(self, max_count=None):
         self._queue: list[Package] = []
         self.__index = 0
         self.max_count = max_count
 
+    # 判断是否为空队列
     def is_empty(self):
         return len(self._queue) == 0
-
+    # 判断队列是否满
     def is_full(self):
         return self.max_count and self.__len__() >= self.max_count
 
@@ -77,6 +80,7 @@ class TimePriorityQueue:
         self._queue = self._queue[stop_idx:]
         return time_slice_list
 
+    # 最大容量
     def set_max_count(self, max_count):
         self.max_count = max_count
 
