@@ -86,11 +86,22 @@ class EstiPosition(Location):
         translation_vector = np.array([[camera_pose[3]], [camera_pose[4]], [camera_pose[5]]]).reshape(3,1)
         return rotation_matrix, translation_vector
 
-    def undistort_pixel_coords(pixel_coords, camera_K, distortion_coeffs):
-        # 使用OpenCV进行畸变矫正
-        undistorted_coords = cv2.undistortPoints(pixel_coords, camera_K, distortion_coeffs,P=camera_K)
-        # 返回矫正后的像素坐标 [u,v]
-        return undistorted_coords.squeeze()
+    def undistort_pixel_coords(pixel_coords, camera_K_inv, distortion_coeffs):
+        # 像素坐标转为齐次坐标
+        pixel = np.array([pixel_coords[0], pixel_coords[1], 1.]).reshape(3, 1)
+        # 像素坐标转换到相机坐标系下
+        p_cam = np.dot(camera_K_inv, pixel)
+        # 畸变校正的计算过程
+        x = p_cam[0]
+        y = p_cam[1]
+        r_sq = np.sqrt(x**2 + y**2)
+        
+        x_correction = x * (1 + distortion_coeffs[0] * r_sq + distortion_coeffs[1] * r_sq**2 + distortion_coeffs[2] * r_sq**3) + (2 * distortion_coeffs[3] * x * y + distortion_coeffs[4] * (r_sq**2 + 2 * x**2))
+        y_correction = y * (1 + distortion_coeffs[0] * r_sq + distortion_coeffs[1] * r_sq**2 + distortion_coeffs[2] * r_sq**3) + (distortion_coeffs[3] * (r_sq**2 + 2 * y**2) + 2 * distortion_coeffs[4] * x * y)
+        # 校正后的相机坐标
+        p_cam_distorted = np.array([x_correction, y_correction, 1.]).reshape(3,1)
+        return p_cam_distorted
+
 
     def get_point(self, data: Package):
         camera_K, camera_K_inv = self.set_K(cam_K=data.camera_K)
@@ -99,11 +110,7 @@ class EstiPosition(Location):
 
         # 获取像素并去畸变
         pixel = data.get_center_point() # [float, float]
-        pixel = np.array([pixel])
-        pixel = self.undistort_pixel_coords(pixel, camera_K, distortion_coeffs) # [u,v]
-        pixel = np.array([[pixel[0]], [pixel[1]], [1.]]).reshape(3,1)
-
-        p_c1 = np.dot(camera_K_inv, pixel)
+        p_c1 = self.undistort_pixel_coords(pixel, camera_K_inv, distortion_coeffs) # [u,v]
         # 归一化  o+t1d, 转到世界坐标系R(O+t1d)+t = t1*Rd + t
         pc_d = p_c1 / np.linalg.norm(p_c1)
         pw_d = np.dot(rotation_matrix, pc_d)
