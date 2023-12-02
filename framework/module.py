@@ -9,9 +9,9 @@ class Package:
         # read only
         self.time = time
         self.uav_id: int = None
-        self.camera_pose: list[float] = [] # [yaw,pitch,roll,x,y,z]
-        self.camera_K: list[float] = [] # [fx,fy,cx,cy]
-        self.camera_distortion: list[float] = [] #[k1,k2,p1,p2]
+        self.camera_pose: list[float] = []  # [yaw,pitch,roll,x,y,z]
+        self.camera_K: list[float] = []  # [fx,fy,cx,cy]
+        self.camera_distortion: list[float] = []  # [k1,k2,p1,p2]
         self.Bbox: list[int] = []
         self.class_id: int = None
         self.class_name: str = None
@@ -24,7 +24,8 @@ class Package:
         self.location: list[float] = []
 
     def get_center_point(self) -> list[float]:
-        return [(self.Bbox[0]+self.Bbox[2])/2, (self.Bbox[1]+self.Bbox[3])/2] # TODO 有错误
+        # TODO 有错误
+        return [(self.Bbox[0]+self.Bbox[2])/2, (self.Bbox[1]+self.Bbox[3])/2]
 
     def __str__(self):
         return f"time:{self.time}"
@@ -40,13 +41,14 @@ class TimePriorityQueue:
     def is_empty(self):
         return len(self._queue) == 0
     # 判断队列是否满
+
     def is_full(self):
         return self.max_count and self.__len__() >= self.max_count
 
     def push(self, package: Package):
         if self.max_count and self.__len__() >= self.max_count:
             return -1
-        idx =0
+        idx = 0
         while idx < self.__len__():
             if self._queue[idx].time > package.time:
                 self._queue.insert(idx, package)
@@ -135,4 +137,4 @@ class Module:
         return NotImplementedError
 
     def __str__(self):
-        return  self.name
+        return self.name

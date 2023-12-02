@@ -19,7 +19,8 @@ class EstiPosition(Location):
         mesh = trimesh.load_mesh(path) #load or load_mesh
         if (type(mesh) == trimesh.base.Trimesh):
             # 移动到中心
-            mesh=mesh_centerize(mesh)
+            # mesh=mesh_centerize(mesh)  # 未知函数
+            pass  
 
         triangles = list(mesh.geometry.values())[0].vertices[list(mesh.geometry.values())[0].faces] # TODO 这两句可优化
         triangles = np.array(triangles, dtype='f4')  # 一定要有这一行，不然会有错。
