@@ -1,6 +1,7 @@
 import json
-# 单相机多时刻2目标跟踪
+import random
 
+# 单相机多时刻2目标跟踪
 def create_json_file(timestamp, uav_id, camera_id, pose, K, distortion, tracked_data, i):
     data = {
         "timestamp": timestamp,
@@ -26,10 +27,10 @@ def create_json_file(timestamp, uav_id, camera_id, pose, K, distortion, tracked_
         data["objs"].append(obj)
 
     # Writing data to JSON file
-    with open('jsons/time'+str(i)+'.json', 'w') as outfile:
+    with open('jsons/'+str(timestamp)+'.json', 'w') as outfile:
         json.dump(data, outfile, indent=4)
 
-timestamp = 124567824564654
+start_timestamp = 1701482850000  #unix 时间戳 2023-12-02 10:07:30.000 ms  起始时间
 uav_id = 1
 camera_id = 1
 # [yaw, pitch, roll, x, y ,z]
@@ -41,9 +42,9 @@ distortion = [-0.16511311963465314, 0.06499598603806166, 0.0033307309789138034, 
 # [tracker_id, cls_id, bbox, loc]
 traked_num = 2
 tracked_data = [[1,0,[30,30,3,4],[]],[2,1,[20,30,1,2],[]]]
-time = 10
-for i in range(time):
-    timestamp = timestamp + 1
+package_num = 1000  #需要模拟的数据包数量
+for i in range(package_num):
+    timestamp = start_timestamp + i*1000 + random.randint(-30, 30)  #  有随机误差的时间戳  +-30ms
     for j in range(len(tracked_data)):
         # 像素位置更新
         if tracked_data[j][1] == 0: # 车，每次移动4像素
