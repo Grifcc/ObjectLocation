@@ -24,7 +24,7 @@ K = np.array([[fx, 0, cx],
               [0, 0, 1]])
 
 # 读取OBJ文件
-obj_file_path = 'E:\\code\\ObjectLocation\\data\\Desert.obj'
+# obj_file_path = 'E:\\code\\ObjectLocation\\data\\Desert.obj'
 
 
  # 设置相机位姿   
@@ -175,8 +175,8 @@ def visualize_obj(ax, vertices, faces):
 
 
 # 可视化OBJ文件
-vertices, faces = read_obj(obj_file_path)
-visualize_obj(ax, vertices, faces)
+# vertices, faces = read_obj(obj_file_path)
+# visualize_obj(ax, vertices, faces)
 
 def track(ax, points):
     for i in range(1):
