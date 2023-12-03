@@ -28,21 +28,21 @@ class Package:
     def __str__(self):
         return f"time:{self.time}"
     
-    # def display_info(self):
-    #     print(f"Time: {self.time}")
-    #     print(f"UAV ID: {self.uav_id}")
-    #     print(f"Camera Pose: {self.camera_pose}")
-    #     print(f"Camera K: {self.camera_K}")
-    #     print(f"Camera Distortion: {self.camera_distortion}")
-    #     print(f"Bbox: {self.Bbox}")
-    #     print(f"Class ID: {self.class_id}")
-    #     print(f"Class Name: {self.class_name}")
-    #     print(f"Tracker ID: {self.tracker_id}")
-    #     print(f"UAV Position: {self.uav_pos}")
-    #     print(f"Object Image: {self.obj_img}")
-    #     print(f"Global ID: {self.global_id}")
-    #     print(f"Local ID: {self.local_id}")
-    #     print(f"Location: {self.location}")
+    def display_info(self):
+        print(f"Time: {self.time}")
+        print(f"UAV ID: {self.uav_id}")
+        print(f"Camera Pose: {self.camera_pose}")
+        print(f"Camera K: {self.camera_K}")
+        print(f"Camera Distortion: {self.camera_distortion}")
+        print(f"Bbox: {self.Bbox}")
+        print(f"Class ID: {self.class_id}")
+        print(f"Class Name: {self.class_name}")
+        print(f"Tracker ID: {self.tracker_id}")
+        print(f"UAV Position: {self.uav_pos}")
+        print(f"Object Image: {self.obj_img}")
+        print(f"Global ID: {self.global_id}")
+        print(f"Local ID: {self.local_id}")
+        print(f"Location: {self.location}")
 
 def parse_json_to_packages(file_path):
     packages = []
@@ -76,5 +76,5 @@ file_path = 'jsons/time1.json'
 packages = parse_json_to_packages(file_path)
 
 # 打印每个Package对象的信息
-# for package in packages:
-#     package.display_info()
+for package in packages:
+    package.display_info()

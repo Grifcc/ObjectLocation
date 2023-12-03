@@ -11,8 +11,8 @@ class Package:
         self.uav_id: int = None
         self.camera_pose: list[float] = [] # [yaw,pitch,roll,x,y,z]
         self.camera_K: list[float] = [] # [fx,fy,cx,cy]
-        self.camera_distortion: list[float] = [] #[k1,k2,p1,p2]
-        self.Bbox: list[int] = []
+        self.camera_distortion: list[float] = [] #[k1,k2,k3,p1,p2]
+        self.Bbox: list[int] = [] # [u,v,w,h]
         self.class_id: int = None
         self.class_name: str = None
         self.tracker_id: int = None
