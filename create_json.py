@@ -17,7 +17,7 @@ if __name__ == "__main__":
                         help='Whether to generate sim data')
     parser.add_argument('--unity_data', default='data/unit_data.json',
                         type=str, help='Path of unit_data')
-    parser.add_argument('--sim_data', default='data/sim_data.json',
+    parser.add_argument('--sim_data', default='data/simulate_data.json',
                         type=str, help='Path of sim_data')
     args = parser.parse_args()
 
@@ -99,11 +99,11 @@ if __name__ == "__main__":
         "camera_params": {
             "pose": pose,  # [yaw,pitch,roll,x,y,z]
             "K": K,        # [fx,fy,cx,cy]
-            "distortion": distortion  # [k1,k2,p1,p2]
+            "distortion": distortion,  # [k1,k2,p1,p2]
+            "obj_img": None
         },
         "obj_cnt": None,
         "objs": [],
-        "obj_img": None
     }
 
     obj = {

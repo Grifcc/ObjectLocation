@@ -6,17 +6,20 @@ class Source(Module):
     def __init__(self, name, max_queue_length=None):
         super().__init__(name, None,  max_queue_length)
 
-    def process(self, package: Package):
+    def process(self, packages: list[Package]):
         return NotImplementedError
 
     def run(self):
         while True:
-            package = Package()
-            if not self.process(package):
+            packages:list[Package] = []
+            if not self.process(packages):
                 break
             while self.output_queue.is_full():
                 time.sleep(0.1)
-            self.output_lock.acquire()
-            self.output_queue.push(package)
-            self.output_lock.release()
+            for package in packages:
+                while self.output_queue.is_full():
+                    time.sleep(0.1)
+                self.output_lock.acquire()
+                self.output_queue.push(package)
+                self.output_lock.release()
             

@@ -1,6 +1,6 @@
 from framework import Package
 from framework import PreProcess
-
+import copy
 class TimeFilter(PreProcess):
     def __init__(self, time_slice):
         super().__init__("TimeFilter", time_slice)
@@ -19,5 +19,5 @@ class TimeFilter(PreProcess):
         for package in data_map.values():
             return_data.append(package)
 
-        data = return_data
+        data =copy.deepcopy(return_data)
         

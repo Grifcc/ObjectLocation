@@ -51,8 +51,8 @@ class CircularQueue:
 
 
 class SpatialFilter(Filter):
-    def __init__(self, name, time_slice, max_queue_length=None):
-        super().__init__(name, time_slice, max_queue_length)
+    def __init__(self, time_slice, max_queue_length=None):
+        super().__init__("SpatialFilter", time_slice, max_queue_length)
         self.global_history = self.create_history(20)
         self.distance_threshold = None # 超参
     

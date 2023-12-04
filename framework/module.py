@@ -1,5 +1,6 @@
 from typing import Union
 import threading
+import copy
 
 # package包
 class Package:
@@ -26,7 +27,9 @@ class Package:
     def get_center_point(self) -> list[float]:
         # TODO 有错误
         return [(self.Bbox[0]+self.Bbox[2])/2, (self.Bbox[1]+self.Bbox[3])/2]
-
+    def copy(self):
+        return copy.deepcopy(self)
+    
     def __str__(self):
         return f"time:{self.time}"
 
