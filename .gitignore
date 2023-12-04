@@ -62,3 +62,7 @@ celerybeat-schedule
 *.sage.py
 
 python-mesh-raycast/
+
+*.json
+#vscode
+.vscode/
