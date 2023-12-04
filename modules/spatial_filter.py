@@ -51,19 +51,16 @@ class CircularQueue:
 
 
 class SpatialFilter(Filter):
-    def __init__(self, time_slice, max_queue_length=None):
+    def __init__(self, time_slice, max_queue_length=None, distance_threshold=None):
         super().__init__("SpatialFilter", time_slice, max_queue_length)
-        self.global_history = self.create_history(20)
-        self.distance_threshold = None # 超参
+        self.global_history = self.create_history(max_queue_length)
+        self.distance_threshold = distance_threshold # 超参
     
     def create_history(self, max_number):
-        self.global_history = CircularQueue(max_number)
-        self.global_history.enqueue([{}]) # TODO 这个代码history为null时报错，所以先enqueue
+        global_history = CircularQueue(max_number)
+        global_history.enqueue([{}]) # TODO 这个代码history为null时报错，所以先enqueue
+        return global_history
 
-
-    # 设置阈值
-    def set_distance_threshold(self, distance_threshold):
-        self.distance_threshold = distance_threshold
 
     # 按照class_id为两个列表，每个列表再按照uav_id分行
     def classify_classid_uav(self, packages: list[Package]):
@@ -95,7 +92,6 @@ class SpatialFilter(Filter):
             list_i = detections_list[i]
             for j in range(i+1, len(detections_list)): # uav_id+1
                 list_j = detections_list[j]
-
                 # 创建两个列表的距离矩阵，并初始化为最大值
                 matrix_distance = np.full((len(list_i), len(list_j)), float('inf'))
                 # 将距离小于阈值的赋值即可
@@ -150,10 +146,10 @@ class SpatialFilter(Filter):
             # print(f"Local ID: {local_id}")
             sum_pose_location = np.array([0., 0., 0.])
             for detect in group:
-                sum_pose_location += detect.pose_location
+                sum_pose_location += np.array(detect.location).reshape(3,)
             aver_pose_location = sum_pose_location / len(group)
             for detect in group:
-                detect.pose_location = aver_pose_location
+                detect.location = aver_pose_location.tolist()
             group = sorted(group, key=lambda x: x.uav_id)
 
         #     for detect in group:
@@ -168,8 +164,8 @@ class SpatialFilter(Filter):
     输入:grouped_detections, global_queue(空间过滤后的detection, global溯源表)
     输出:grouped_detections, global_queue(更新global后的detection, 更新后global溯源表)
     '''
-    def find_global(grouped_detections, global_queue):
-        last_track_list= global_queue.get_last_element() # eg.last_track_list[i]为 global_id_index - {uav1:track2, uav3:track2}
+    def find_global(self, grouped_detections, global_queue):
+        last_track_list = global_queue.get_last_element() # eg.last_track_list[i]为 global_id_index - {uav1:track2, uav3:track2}
         new_list = [{}]*len(last_track_list) 
         global_id = len(last_track_list) 
         for local_id, group in grouped_detections.items():
@@ -177,7 +173,7 @@ class SpatialFilter(Filter):
             # 找到当下loacl_id之前追踪到的点
             found = False    
             for detect in group:
-                detect_track_id = detect.track_id
+                detect_track_id = detect.tracker_id
                 detect_uav_id = detect.uav_id
                 for i in range(len(last_track_list)):
                     if detect_uav_id in last_track_list[i] and detect_track_id == last_track_list[i][detect_uav_id]:
@@ -186,7 +182,7 @@ class SpatialFilter(Filter):
                         for detect in group:
                             detect.global_id = i # 更新global_id
                             # 更新global溯源表
-                            my_dict[detect.uav_id] = detect.track_id 
+                            my_dict[detect.uav_id] = detect.tracker_id 
                         new_list[i] = my_dict
                         break
                 if found:
@@ -196,7 +192,7 @@ class SpatialFilter(Filter):
                 for detect in group:
                     detect.global_id = global_id # 更新global_id
                     # 更新global溯源表
-                    my_dict[detect.uav_id] = detect.track_id 
+                    my_dict[detect.uav_id] = detect.tracker_id 
                 new_list.append(my_dict)
                 global_id = global_id+1
         
@@ -210,8 +206,11 @@ class SpatialFilter(Filter):
         # 拆解list，便于后续操作
         class0_list, class1_list = self.classify_classid_uav(packages)
         # 赋值local_id
-        class0_list, local_id = self.Spatial_filter1(self.distance_threshold, class0_list, local_id=0)
-        class1_list, local_id = self.Spatial_filter1(self.distance_threshold, class1_list, local_id=local_id)
+        local_id = 0
+        if len(class0_list) != 0:
+            class0_list, local_id = self.Spatial_filter1(self.distance_threshold, class0_list, local_id=local_id)
+        if len(class1_list) != 0:
+            class1_list, local_id = self.Spatial_filter1(self.distance_threshold, class1_list, local_id=local_id)
         # 空间滤波2:根据local_id更新平均距离，同local_id会按照track_id排序
         group_list = self.Spatial_filter2(class0_list, class1_list)
         # global_id溯源

@@ -13,20 +13,24 @@ class Package:
         self.camera_pose: list[float] = []  # [yaw,pitch,roll,x,y,z]
         self.camera_K: list[float] = []  # [fx,fy,cx,cy]
         self.camera_distortion: list[float] = []  # [k1,k2,p1,p2]
-        self.Bbox: list[int] = []
+        self.Bbox: list[int] = [] # [x,y,w,h]
         self.class_id: int = None
         self.class_name: str = None
         self.tracker_id: int = None
-        self.uav_pos: list[float] = []
+        self.uav_pos: list[float] = [] 
         self.obj_img: str = None
         # read & write
         self.global_id: int = None
         self.local_id: int = None
-        self.location: list[float] = []
+        self.location: list[float] = []  # (WGS84）
 
     def get_center_point(self) -> list[float]:
-        # TODO 有错误
-        return [(self.Bbox[0]+self.Bbox[2])/2, (self.Bbox[1]+self.Bbox[3])/2]
+        # TODO 有错误 1车0人
+        if self.class_id == 1:
+            return [self.Bbox[0]+self.Bbox[2]/2., self.Bbox[1]+self.Bbox[3]/2.]
+        elif self.class_id == 0:
+            return [self.Bbox[0]+self.Bbox[2]/2., self.Bbox[1]+self.Bbox[3]]
+        
     def copy(self):
         return copy.deepcopy(self)
     
