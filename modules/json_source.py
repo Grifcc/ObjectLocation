@@ -20,17 +20,16 @@ class JsonSource(Source):
         objs = self.data.pop(0)
         bbox = Package()
         
-        for obj in objs:
-            bbox.time = objs["time"]
+        for obj in objs["objs"]:
+            bbox.time = objs["timestamp"]
             bbox.uav_id = objs["uav_id"]
             bbox.camera_pose = objs["camera_params"]["pose"]
             bbox.camera_K = objs["camera_params"]["K"]
             bbox.camera_distortion =objs["camera_params"]["distortion"]
             bbox.Bbox = obj["bbox"]
-            bbox.class_id = obj["class_id"]
+            bbox.class_id = obj["cls_id"]
             bbox.class_name = obj["tracker_id"]
             bbox.uav_pos = obj["loc"]
-            bbox.obj_img = obj["obj_img"]
-
-        packages.append(bbox.copy())
+            packages.append(bbox.copy())
+            
         return True

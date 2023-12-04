@@ -124,7 +124,7 @@ if __name__ == "__main__":
     for i in range(len(human_data)):
         data["timestamp"] = start_timestamp + i*40 + random.randint(-10, 10)
         data["obj_cnt"] = 2
-
+        data["objs"]=[]
         # 人
         obj["tracker_id"] = 1
         obj["cls_id"] = 0

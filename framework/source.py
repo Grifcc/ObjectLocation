@@ -4,7 +4,7 @@ import time
 
 class Source(Module):
     def __init__(self, name, max_queue_length=None):
-        super().__init__(name, None,  max_queue_length)
+        super().__init__(name,  max_queue_length)
 
     def process(self, packages: list[Package]):
         return NotImplementedError

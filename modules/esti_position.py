@@ -46,8 +46,7 @@ class EstiPosition(Location):
         return K, K_inv
     
     def set_distortion_coeffs(self,  distortion_param):
-        k1, k2, p1, p2 = distortion_param
-        return np.array([k1, k2, p1, p2])
+        return np.array(distortion_param)
 
     def set_rotation_matrix(self, t1, t2, t3): # (roll, pitch, yaw)
         # 角度转弧度
@@ -87,7 +86,7 @@ class EstiPosition(Location):
         translation_vector = np.array([[camera_pose[3]], [camera_pose[4]], [camera_pose[5]]]).reshape(3,1)
         return rotation_matrix, translation_vector
 
-    def undistort_pixel_coords(pixel_coords, camera_K_inv, distortion_coeffs):
+    def undistort_pixel_coords(self,pixel_coords, camera_K_inv, distortion_coeffs):
         # 像素坐标转为齐次坐标
         pixel = np.array([pixel_coords[0], pixel_coords[1], 1.]).reshape(3, 1)
         # 像素坐标转换到相机坐标系下
@@ -99,8 +98,9 @@ class EstiPosition(Location):
         
         x_correction = x * (1 + distortion_coeffs[0] * r_sq + distortion_coeffs[1] * r_sq**2 + distortion_coeffs[2] * r_sq**3) + (2 * distortion_coeffs[3] * x * y + distortion_coeffs[4] * (r_sq**2 + 2 * x**2))
         y_correction = y * (1 + distortion_coeffs[0] * r_sq + distortion_coeffs[1] * r_sq**2 + distortion_coeffs[2] * r_sq**3) + (distortion_coeffs[3] * (r_sq**2 + 2 * y**2) + 2 * distortion_coeffs[4] * x * y)
+       
         # 校正后的相机坐标
-        p_cam_distorted = np.array([x_correction, y_correction, 1.]).reshape(3,1)
+        p_cam_distorted = np.array([x_correction[0], y_correction[0], 1.]).reshape(3,1)
         return p_cam_distorted
 
 

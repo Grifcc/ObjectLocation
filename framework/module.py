@@ -4,7 +4,7 @@ import copy
 
 # package包
 class Package:
-    def __init__(self, time):
+    def __init__(self, time=None):
 
         # Public variables
         # read only
