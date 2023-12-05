@@ -5,6 +5,7 @@ import mesh_raycast
 import numpy as np
 import time
 
+
 def set_K(cam_K):
     fx, fy, cx, cy = cam_K
     # 构建内参矩阵
@@ -94,7 +95,7 @@ class SimulationCamera:
 
         self.mesh = self.read_mesh(mesh_path)
 
-    def read_mesh(self,mesh_path):
+    def read_mesh(self, mesh_path):
         mesh = trimesh.load_mesh(mesh_path)
         all_meshes = [geom for geom in mesh.geometry.values()]
         # 使用 concatenate 函数将多个 mesh 合并为一个
@@ -106,16 +107,16 @@ class SimulationCamera:
         mesh = triangles
         return triangles
 
-    def generate_simulation(self, point, obj_size:list):
+    def generate_simulation(self, point, obj_size: list):
         ray_origins = np.array([point[0], point[1], 200]).reshape(3, 1)
         ray_directions = [0, 0, -1.]
         result = mesh_raycast.raycast(ray_origins, ray_directions, self.mesh)
         if len(result) == 0:  # TODO 可优化
-            result_point = [0.0,0.0,0.0]
+            result_point = [0.0, 0.0, 0.0]
         else:
             first_result = min(result, key=lambda x: x['distance'])
             result_point = first_result['point']
-        
+
         result_point = list(result_point)
         real_point = result_point[:]
 
@@ -124,8 +125,8 @@ class SimulationCamera:
         p_cd = p_c1/p_c1[2]
         pixel = self.camera_K@p_cd
 
-
-        img_pixel = [pixel[0][0]-obj_size[0]/2, pixel[1][0] -
+        # [cx,cy,w,h]
+        img_pixel = [pixel[0][0], pixel[1][0] -
                      obj_size[1]/2, obj_size[0], obj_size[1]]
 
         # 找到预测点

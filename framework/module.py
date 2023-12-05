@@ -27,11 +27,8 @@ class Package:
         self.location: list[float] = []  # (WGS84）
 
     def get_center_point(self) -> list[float]:
-        # TODO 有错误 1车0人
-        if self.class_id == 1:
-            return [self.Bbox[0]+self.Bbox[2]/2., self.Bbox[1]+self.Bbox[3]/2.]
-        elif self.class_id == 0:
-            return [self.Bbox[0]+self.Bbox[2]/2., self.Bbox[1]+self.Bbox[3]]
+        # 均按底边中点计入
+        return [self.Bbox[0], self.Bbox[1]+self.Bbox[3] / 2]
 
     def copy(self):
         return copy.deepcopy(self)
