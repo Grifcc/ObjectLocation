@@ -16,7 +16,7 @@ class Package:
         self.camera_K: list[float] = []  # [fx,fy,cx,cy]
         self.camera_distortion: list[float] = []  # [k1,k2,p1,p2]
         self.Bbox: list[int] = []  # [x,y,w,h]
-        self.class_id: int = None
+        self.class_id: int = None # 0人1车
         self.class_name: str = None
         self.tracker_id: int = None
         self.uav_pos: list[float] = []
@@ -28,7 +28,7 @@ class Package:
 
     def get_center_point(self) -> list[float]:
         # 均按底边中点计入
-        return [self.Bbox[0], self.Bbox[1]+self.Bbox[3] / 2]
+        return [self.Bbox[0]+self.Bbox[2]/2., self.Bbox[1]+self.Bbox[3]]
 
     def copy(self):
         return copy.deepcopy(self)

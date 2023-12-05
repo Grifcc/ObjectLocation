@@ -205,6 +205,7 @@ class SpatialFilter(Filter):
     def process(self, packages: list[Package]):
         # 拆解list，便于后续操作
         class0_list, class1_list = self.classify_classid_uav(packages)
+       
         # 赋值local_id
         local_id = 0
         if len(class0_list) != 0:

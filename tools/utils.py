@@ -126,9 +126,7 @@ class SimulationCamera:
         pixel = self.camera_K@p_cd
 
         # [cx,cy,w,h]
-        img_pixel = [pixel[0][0], pixel[1][0] -
-                     obj_size[1]/2, obj_size[0], obj_size[1]]
-
+        img_pixel = [pixel[0][0]-obj_size[0]/2., pixel[1][0]-obj_size[1], obj_size[0], obj_size[1]]
         # 找到预测点
         pixel = [pixel[0][0], pixel[1][0]]
         p_c1 = undistort_pixel_coords(
