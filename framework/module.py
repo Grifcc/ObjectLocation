@@ -16,7 +16,7 @@ class Package:
         self.camera_K: list[float] = []  # [fx,fy,cx,cy]
         self.camera_distortion: list[float] = []  # [k1,k2,p1,p2]
         self.Bbox: list[int] = []  # [x,y,w,h]
-        self.class_id: int = None # 0人1车
+        self.class_id: int = None  # 0人1车
         self.class_name: str = None
         self.tracker_id: int = None
         self.uav_pos: list[float] = []
@@ -37,6 +37,8 @@ class Package:
         return f"time:{self.time}"
 
 # 基于时间优先级的队列   队尾是老时间，队头是新时间
+
+
 class TimePriorityQueue:
     def __init__(self, max_count=None):
         self._queue: list[Package] = []
@@ -75,9 +77,9 @@ class TimePriorityQueue:
         stop_idx = None
         if self.is_empty():
             raise IndexError("TimePriorityQueue is empty")
-        for idx in range(self.__len__()-1, 0, -1):
+        for idx in range(self.__len__()-1, -1, -1):
             if self._queue[idx].time - self._queue[-1].time > time_slice:
-                stop_idx = idx+1
+                stop_idx = idx + 1
                 break
         else:
             stop_idx = 0
