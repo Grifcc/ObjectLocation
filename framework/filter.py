@@ -14,7 +14,7 @@ class Filter(Module):
     def run(self):
         while True:
             self.input_lock.acquire()
-            if self.input_queue.is_empty():
+            if self.input_queue.is_empty() or self.input_queue.delta_time() < self.time_slice:
                 self.input_lock.release()
                 continue
             packages = self.input_queue.get_time_slice(self.time_slice)
