@@ -78,18 +78,19 @@ class TimePriorityQueue:
         stop_idx = None
         if self.is_empty():
             raise IndexError("TimePriorityQueue is empty")
-        for idx in range(self.__len__()):
-            if self._queue[idx].time - self._queue[0].time > time_slice:
-                stop_idx = idx-1
+        for idx in range(self.__len__()-1, 0, -1):
+            if self._queue[idx].time - self._queue[-1].time > time_slice:
+                stop_idx = idx+1
                 break
-            if idx == self.__len__()-1:
-                stop_idx = idx
+        else:
+            stop_idx = 0
 
-        if stop_idx == None:
-            return []
-        time_slice_list = self._queue[:stop_idx]
-        self._queue = self._queue[stop_idx:]
+        time_slice_list = self._queue[stop_idx:]
+        self._queue = self._queue[:stop_idx]
         return time_slice_list
+
+    def delta_time(self):
+        return self._queue[0].time - self._queue[-1].time
 
     # 最大容量
     def set_max_count(self, max_count):
