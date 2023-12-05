@@ -17,23 +17,13 @@ class EstiPosition(Location):
     # TODO 这个对于不同的mesh地图有error
     def set_Mesh(self, path):
         mesh = trimesh.load_mesh(path) #load or load_mesh
-        if (type(mesh) == trimesh.base.Trimesh):
-            # 移动到中心
-            # mesh=mesh_centerize(mesh)  # 未知函数
-            pass  
-
-        triangles = list(mesh.geometry.values())[0].vertices[list(mesh.geometry.values())[0].faces] # TODO 这两句可优化
+        all_meshes = [geom for geom in mesh.geometry.values()]
+        # 使用 concatenate 函数将多个 mesh 合并为一个
+        combined_mesh = trimesh.util.concatenate(all_meshes)
+        vertices = combined_mesh.vertices
+        faces = combined_mesh.faces
+        triangles = vertices[faces]
         triangles = np.array(triangles, dtype='f4')  # 一定要有这一行，不然会有错。
-   
-        # if (type(mesh) == trimesh.scene.scene.Scene):
-        #     print("scene")
-        #     print(list(mesh.geometry.values())[0])
-        # elif (type(mesh) == trimesh.base.Trimesh):
-        #     print("single object")
-        #     # 移动到中心
-        #     mesh=mesh_centerize(mesh)
-        #     print(np.min(mesh.vertices,0))
-        #     print(np.max(mesh.vertices, 0))
         return triangles
 
     def set_K(self, cam_K):
@@ -46,8 +36,8 @@ class EstiPosition(Location):
         return K, K_inv
     
     def set_distortion_coeffs(self,  distortion_param):
-        k1, k2, p1, p2 = distortion_param
-        return np.array([k1, k2, p1, p2])
+        k1, k2, k3, p1, p2 = distortion_param
+        return np.array([k1, k2, k3, p1, p2])
 
     def set_rotation_matrix(self, t1, t2, t3): # (roll, pitch, yaw)
         # 角度转弧度
@@ -87,18 +77,19 @@ class EstiPosition(Location):
         translation_vector = np.array([[camera_pose[3]], [camera_pose[4]], [camera_pose[5]]]).reshape(3,1)
         return rotation_matrix, translation_vector
 
-    def undistort_pixel_coords(pixel_coords, camera_K_inv, distortion_coeffs):
+    def undistort_pixel_coords(self, pixel_coords, camera_K_inv, distortion_coeffs):
         # 像素坐标转为齐次坐标
         pixel = np.array([pixel_coords[0], pixel_coords[1], 1.]).reshape(3, 1)
         # 像素坐标转换到相机坐标系下
         p_cam = np.dot(camera_K_inv, pixel)
         # 畸变校正的计算过程
-        x = p_cam[0]
-        y = p_cam[1]
+        x = p_cam[0][0]
+        y = p_cam[1][0]
         r_sq = np.sqrt(x**2 + y**2)
         
         x_correction = x * (1 + distortion_coeffs[0] * r_sq + distortion_coeffs[1] * r_sq**2 + distortion_coeffs[2] * r_sq**3) + (2 * distortion_coeffs[3] * x * y + distortion_coeffs[4] * (r_sq**2 + 2 * x**2))
         y_correction = y * (1 + distortion_coeffs[0] * r_sq + distortion_coeffs[1] * r_sq**2 + distortion_coeffs[2] * r_sq**3) + (distortion_coeffs[3] * (r_sq**2 + 2 * y**2) + 2 * distortion_coeffs[4] * x * y)
+  
         # 校正后的相机坐标
         p_cam_distorted = np.array([x_correction, y_correction, 1.]).reshape(3,1)
         return p_cam_distorted
@@ -119,7 +110,6 @@ class EstiPosition(Location):
         ray_directions = pw_d.flatten()
 
         # TODO 这里交了很多面片。需要优化到找到第一个面片就停止
-        result_point = None
         # 射线交面片：
         result = mesh_raycast.raycast(ray_origins, ray_directions, mesh=self.mesh)
         if len(result) == 0: # TODO 可优化
@@ -127,7 +117,7 @@ class EstiPosition(Location):
         else:
             first_result = min(result, key=lambda x: x['distance'])
             result_point= first_result['point']
-        return result_point.tolist()
+        return list(result_point)
 
     def process(self, data: Package):
         data.location = self.get_point(data)

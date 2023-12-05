@@ -1,9 +1,12 @@
 from typing import Union
 import threading
+import copy
 
 # package包
+
+
 class Package:
-    def __init__(self, time):
+    def __init__(self, time=None):
 
         # Public variables
         # read only
@@ -12,8 +15,8 @@ class Package:
         self.camera_pose: list[float] = []  # [yaw,pitch,roll,x,y,z]
         self.camera_K: list[float] = []  # [fx,fy,cx,cy]
         self.camera_distortion: list[float] = []  # [k1,k2,p1,p2]
-        self.Bbox: list[int] = []
-        self.class_id: int = None
+        self.Bbox: list[int] = []  # [x,y,w,h]
+        self.class_id: int = None  # 0人1车
         self.class_name: str = None
         self.tracker_id: int = None
         self.uav_pos: list[float] = []
@@ -21,16 +24,21 @@ class Package:
         # read & write
         self.global_id: int = None
         self.local_id: int = None
-        self.location: list[float] = []
+        self.location: list[float] = []  # (WGS84）
 
     def get_center_point(self) -> list[float]:
-        # TODO 有错误
-        return [(self.Bbox[0]+self.Bbox[2])/2, (self.Bbox[1]+self.Bbox[3])/2]
+        # 均按底边中点计入
+        return [self.Bbox[0]+self.Bbox[2]/2., self.Bbox[1]+self.Bbox[3]]
+
+    def copy(self):
+        return copy.deepcopy(self)
 
     def __str__(self):
         return f"time:{self.time}"
 
-# 基于时间优先级的队列
+# 基于时间优先级的队列   队尾是老时间，队头是新时间
+
+
 class TimePriorityQueue:
     def __init__(self, max_count=None):
         self._queue: list[Package] = []
@@ -50,11 +58,11 @@ class TimePriorityQueue:
             return -1
         idx = 0
         while idx < self.__len__():
-            if self._queue[idx].time > package.time:
+            if self._queue[idx].time < package.time:
                 self._queue.insert(idx, package)
                 break
             idx += 1
-        if idx == self.__len__():
+        else:
             self._queue.append(package)
 
     def pop(self):
@@ -69,18 +77,19 @@ class TimePriorityQueue:
         stop_idx = None
         if self.is_empty():
             raise IndexError("TimePriorityQueue is empty")
-        for idx in range(self.__len__()):
-            if self._queue[idx].time - self._queue[0].time > time_slice:
-                stop_idx = idx-1
+        for idx in range(self.__len__()-1, -1, -1):
+            if self._queue[idx].time - self._queue[-1].time > time_slice:
+                stop_idx = idx + 1
                 break
-            if idx == self.__len__()-1:
-                stop_idx = idx
+        else:
+            stop_idx = 0
 
-        if stop_idx == None:
-            return []
-        time_slice_list = self._queue[:stop_idx]
-        self._queue = self._queue[stop_idx:]
+        time_slice_list = self._queue[stop_idx:]
+        self._queue = self._queue[:stop_idx]
         return time_slice_list
+
+    def delta_time(self):
+        return self._queue[0].time - self._queue[-1].time
 
     # 最大容量
     def set_max_count(self, max_count):
@@ -105,6 +114,12 @@ class TimePriorityQueue:
         item = self._queue[self.__index]
         self.__index += 1
         return item
+
+    def __getitem__(self, index):
+        return self._queue[index]
+
+    def __setitem__(self, index, value):
+        self._queue[index] = value
 
 
 class Module:

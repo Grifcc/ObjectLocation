@@ -1,11 +1,11 @@
 from framework import Package
 from framework import PreProcess
-
+import copy
 class TimeFilter(PreProcess):
     def __init__(self, time_slice):
         super().__init__("TimeFilter", time_slice)
         
-    def process(self, data: list[Package]): # data不发生改变？
+    def process(self, data: list[Package]): 
         return_data = []  #需要返回的列表
         data_map = {} #用于存储数据的字典，按无人机id分类
         for package in data:
@@ -19,5 +19,5 @@ class TimeFilter(PreProcess):
         for package in data_map.values():
             return_data.append(package)
 
-        data = return_data
+        return return_data
         
