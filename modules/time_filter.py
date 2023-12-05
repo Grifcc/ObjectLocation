@@ -19,5 +19,5 @@ class TimeFilter(PreProcess):
         for package in data_map.values():
             return_data.append(package)
 
-        data =copy.deepcopy(return_data)
+        return return_data
         

@@ -214,7 +214,8 @@ class SpatialFilter(Filter):
         # 空间滤波2:根据local_id更新平均距离，同local_id会按照track_id排序
         group_list = self.Spatial_filter2(class0_list, class1_list)
         # global_id溯源
-        packages, self.global_history = self.find_global(group_list, self.global_history)
+        return_data, self.global_history = self.find_global(group_list, self.global_history)
+        return return_data
  
 
 

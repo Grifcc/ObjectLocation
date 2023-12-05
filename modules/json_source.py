@@ -28,7 +28,7 @@ class JsonSource(Source):
             bbox.camera_distortion =objs["camera_params"]["distortion"]
             bbox.Bbox = obj["bbox"]
             bbox.class_id = obj["cls_id"]
-            bbox.class_name = obj["tracker_id"]
+            bbox.tracker_id = obj["tracker_id"]
             bbox.uav_pos = obj["loc"]
             packages.append(bbox.copy())
             

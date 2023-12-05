@@ -10,7 +10,7 @@ class PreProcess(Module):
         if max_queue_length != None:
             self.output_queue.set_max_count(max_queue_length)
 
-    def process(self, packages: list[Package]):
+    def process(self, packages: list[Package]) -> list[Package]:
         return NotImplementedError
 
     def run(self):
@@ -24,7 +24,7 @@ class PreProcess(Module):
             
             if len(packages) == 0:
                 continue
-            self.process(packages)
+            packages = self.process(packages)
 
             for package in packages:
                 while self.output_queue.is_full():
