@@ -1,9 +1,7 @@
 import json
 import random
-from tools.utils import PointType
-import tools.utils as utils
+from tools.utils import PointType, SimulationCamera, SimulationObject
 import argparse
-import numpy as np
 import copy
 from tqdm import tqdm
 
@@ -21,7 +19,7 @@ data_json = {
 }
 
 obj_json = {
-    "uid": None, # for evaluation
+    "uid": None,  # for evaluation
     "tracker_id": None,
     "cls_id": None,
     "bbox": [],
@@ -74,14 +72,15 @@ if __name__ == "__main__":
          311.9712774887887, 253.00946170247045]
     distortion = [0., 0., 0., 0., 0.]
     cam_start = [-210., 0., 100.]
+
     pose1 = [0., -30., 180, cam_start[0], cam_start[1], cam_start[2]]
     pose2 = [0., 30, 180, cam_start[0]+290., cam_start[1]-15., cam_start[2]]
     pose3 = [0., 0, 150, cam_start[0]+210., cam_start[1]+100., cam_start[2]]
-
-    camera1 = utils.SimulationCamera(pose1, K, distortion, MESH_PATH, SHAPE)
-    camera2 = utils.SimulationCamera(pose2, K, distortion, MESH_PATH, SHAPE)
-    camera3 = utils.SimulationCamera(pose3, K, distortion, MESH_PATH, SHAPE)
-    camera_list = [camera1, camera2, camera3]
+    pose_list = [pose1, pose2, pose3]
+    camera_list = []
+    for pose in pose_list:
+        camera_list.append(SimulationCamera(
+            pose, K, distortion, MESH_PATH, SHAPE))
 
     # 目标的起始xy位置
     person1 = [100., 0.]  # 右下角走 # # TODO 这个起始点很难选。容易观测不到 ，我这里只是试一下
@@ -94,10 +93,9 @@ if __name__ == "__main__":
     objs_ids = [0, 1, 0, 1, 0]
     BBOX_SZIE = [[10, 20], [40, 20]]
     objs = []
-
     for idx, start_point in enumerate(objs_start_points):
         clsid = objs_ids[idx]
-        objs.append(utils.SimulationObject(
+        objs.append(SimulationObject(
             start_point, SPEED[clsid]/FRAME_RATE, BBOX_SZIE[clsid], clsid, 45, len(camera_list), max_age=2, uid=idx))
 
     unity_data = {
