@@ -30,21 +30,21 @@ class ImageView:
         else:
             raise ValueError("bbox_type must be 'cxcywh' or 'x1y1x2y2'")
 
-    def _get_cxcywh(self, point: Union[tuple, list]):
+    def _get_cxcywh(self, point: Union[tuple, list], bbox_size: Union[tuple, list]):
         if self.valid_point(point):
-            return [point[0], point[1]-self.height/2, self.width, self.height]
+            return [point[0], point[1] - bbox_size[1]/2, bbox_size[0], bbox_size[1]]
         else:
             return PointType.OOC
 
-    def _get_x1y1x2y2(self, point: Union[tuple, list]):
+    def _get_x1y1x2y2(self, point: Union[tuple, list], bbox_size: Union[tuple, list]):
         if self.valid_point(point):
-            return [point[0]-self.width/2, point[1]-self.height, point[0]+self.width/2, point[1]]
+            return [point[0]-bbox_size[0], point[1]-bbox_size[1], point[0]+bbox_size[0]/2, bbox_size[1]]
         else:
             return PointType.OOC
 
-    def _get_xywh(self, point: Union[tuple, list]):
+    def _get_xywh(self, point: Union[tuple, list], bbox_size: Union[tuple, list]):
         if self.valid_point(point):
-            return [point[0]-self.width/2, point[1]-self.height, point[0], point[1]]
+            return [point[0] - bbox_size[0]/2, point[1]-bbox_size[1], bbox_size[0], bbox_size[1]]
         else:
             return PointType.OOC
 
@@ -131,19 +131,60 @@ def undistort_pixel_coords(pixel_coords, camera_K_inv, distortion_coeffs):
     return p_cam_distorted
 
 
+class SimulationObject:
+    def __init__(self, start_point, speed, bbox_size, class_id, move_angle, num_view, max_age=10, uid=None):
+        self.start_point = start_point
+        self.speed = speed
+        self.class_id = class_id
+        self.move_angle = move_angle
+        self.now_point = start_point
+        self.bbox_size = bbox_size
+        self.uid = uid if uid else id(self)
+        self.tracker_id = [-1] * num_view
+        self.max_age = max_age
+        self.age = [0] * num_view
+
+    def next_point(self):
+        self.now_point[0] += self.speed*np.cos(self.move_angle)
+        self.now_point[1] += self.speed*np.sin(self.move_angle)
+        return self.now_point
+
+    def get_clsid(self):
+        return self.class_id
+
+    def get_bbox_size(self):
+        return self.bbox_size
+
+    def set_speed(self, speed):
+        self.speed = speed
+
+    def reset_age(self, view_id):
+        self.age[view_id] = 0
+
+    def __str__(self) -> str:
+        return f"The Object:\n\tuid:{self.uid}\n\tclass_id:{self.class_id}\n\tspeed:{self.speed}\n\ttracker_id:{self.tracker_id}\n\tage:{self.age}\n\tnow_point:{self.now_point}\n\tbbox_size:{self.bbox_size}\n\tmove_angle:{self.move_angle}\n"
+
+
 class SimulationCamera:
     def __init__(self, poses, camera_K, distortion_coeffs, mesh_path, img_shape, threshold=1.5, bbox_type='cxcywh'):
+
+        self.pose = poses
         self.K = camera_K
         self.distort = distortion_coeffs
         self.camera_K, self.camera_K_inv = set_K(camera_K)
         self.distortion_coeffs = set_distortion_coeffs(distortion_coeffs)
         self.mesh = self.read_mesh(mesh_path)
         self.rotation_matrix, self.translation_vector, self.camera_rotation_inv = self.create_pose(
-            poses)
+            self.pose)
 
         self.img = ImageView(img_shape, bbox_type)
 
         self.threshold = threshold  # 判断是否被遮挡的阈值
+
+        self.max_id = 0
+
+    def get_params(self):
+        return self.pose, self.K, self.distort
 
     def create_pose(self, poses):
         rotation_matrix_i, translation_vector_i = set_camera_pose(poses)
@@ -161,8 +202,11 @@ class SimulationCamera:
         triangles = np.array(triangles, dtype='f4')  # 一定要有这一行，不然会有错。
         return triangles
 
+    def get_max_id(self):
+        return self.max_id
+
     # gt_gis_point[x,y] to  bbox   空间三维点到像平面的二维点
-    def get_bbox_result(self, gt_point) -> list:
+    def get_bbox_result(self, gt_point, bbox_size: Union[tuple, list]):
 
         # 根据 xy找z
         ray_origins = np.array([gt_point[0], gt_point[1], 200]).reshape(3, 1)
@@ -180,7 +224,7 @@ class SimulationCamera:
 
         # 正向求解
         pixel = [pixel[0][0], pixel[1][0]]
-        bbox = self.img.get_bbox(pixel)
+        bbox = self.img.get_bbox(pixel, bbox_size)
         if bbox == PointType.OOC:
             return PointType.OOC, ()  # 图像外
 

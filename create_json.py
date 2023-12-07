@@ -1,7 +1,33 @@
 import json
 import random
+from tools.utils import PointType
 import tools.utils as utils
 import argparse
+import numpy as np
+import copy
+from tqdm import tqdm
+
+data_json = {
+    "timestamp": None,
+    "uav_id": None,
+    "camera_id": None,
+    "camera_params": {
+        "pose": None,  # [yaw,pitch,roll,x,y,z]
+        "K": None,        # [fx,fy,cx,cy]
+        "distortion": None,  # [k1,k2,p1,p2]
+    },
+    "obj_cnt": None,
+    "objs": [],
+}
+
+obj_json = {
+    "uid": None, # for evaluation
+    "tracker_id": None,
+    "cls_id": None,
+    "bbox": [],
+    "loc": None,
+    "obj_img": None
+}
 
 
 if __name__ == "__main__":
@@ -9,8 +35,14 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(add_help=True)
     parser.add_argument(
         '--mesh_path', default='data/odm_textured_model_geo.obj', type=str, help='Path of map mesh')
-    parser.add_argument('--num_points', default=500, type=int,
-                        help='Required amount of simulated data')
+    parser.add_argument('--duration', default=30, type=int,
+                        help='Required amount of simulated data,unit: second')
+    parser.add_argument('--fps', default=24, type=int,
+                        help='Frame rate of camera')
+    parser.add_argument('--speed', default=[2, 20], type=list,
+                        help="The object's movement speed, default:person 2 m/s, car 20 m/s [2,20].")
+    parser.add_argument('--shape', default=[640, 480], type=list,
+                        help="simulated image size, default:[640,480]")
     parser.add_argument('--gen_unity',  action='store_true',
                         help='Whether to generate unity data')
     parser.add_argument('--gen_sim',  action='store_true',
@@ -21,125 +53,106 @@ if __name__ == "__main__":
                         type=str, help='Path of sim_data')
     args = parser.parse_args()
 
+    # 仿真帧率
+    FRAME_RATE = args.fps
+    # 仿真时间
+    DURATION = args.duration
     # 仿真数据量
-    NUM_PERSON = args.num_points
-    NUM_CAR = args.num_points
+    NUM_FRAME = FRAME_RATE * DURATION
+
+    # 仿真物体运动速度
+    SPEED = args.speed
+
+    # 图像大小
+    SHAPE = args.shape
 
     # 地图路径
     MESH_PATH = args.mesh_path
 
-    # 相机参数
-    # 默认25fps，每40ms拍摄一次。
-    # 人类平均速度为2m/s,汽车20m/s。换算每帧之间0.08m，0.8m
-
-    # 相机内参  [fx, fy, cx, cy]
+    # 内参、畸变参数、外参
     K = [355.72670241928597, 357.6787245904993,
          311.9712774887887, 253.00946170247045]
-
-    # 相机位姿 [yaw, pitch, roll, x, y ,z]
-    pose = [0., -30., 180, -10.89, 39.98, 150.]
-
-    start_point_human = [pose[3]-8, pose[4]+30]  # 人类起始位置
-
-    start_point_vehicle = [pose[3]-8, pose[4]+60]  # 车辆起始位置
-
-    # 相机畸变 [k1,k2,k3,p1,p2]
     distortion = [0., 0., 0., 0., 0.]
+    cam_start = [-210., 0., 100.]
+    pose1 = [0., -30., 180, cam_start[0], cam_start[1], cam_start[2]]
+    pose2 = [0., 30, 180, cam_start[0]+290., cam_start[1]-15., cam_start[2]]
+    pose3 = [0., 0, 150, cam_start[0]+210., cam_start[1]+100., cam_start[2]]
 
-    sim_camrea = utils.SimulationCamera(pose, K, distortion, MESH_PATH)
+    camera1 = utils.SimulationCamera(pose1, K, distortion, MESH_PATH, SHAPE)
+    camera2 = utils.SimulationCamera(pose2, K, distortion, MESH_PATH, SHAPE)
+    camera3 = utils.SimulationCamera(pose3, K, distortion, MESH_PATH, SHAPE)
+    camera_list = [camera1, camera2, camera3]
+
+    # 目标的起始xy位置
+    person1 = [100., 0.]  # 右下角走 # # TODO 这个起始点很难选。容易观测不到 ，我这里只是试一下
+    car2 = [-200., 80.]  # 右下角走
+    person3 = [-200., 50.]  # 右上角走
+    car4 = [-200., -120.]  # 右上角走
+    person5 = [-200., -140.]  # 右上角走
+
+    objs_start_points = [person1, car2, person3, car4, person5]
+    objs_ids = [0, 1, 0, 1, 0]
+    BBOX_SZIE = [[10, 20], [40, 20]]
+    objs = []
+
+    for idx, start_point in enumerate(objs_start_points):
+        clsid = objs_ids[idx]
+        objs.append(utils.SimulationObject(
+            start_point, SPEED[clsid]/FRAME_RATE, BBOX_SZIE[clsid], clsid, 45, len(camera_list), max_age=2, uid=idx))
 
     unity_data = {
         "data": []
     }
-
-    human_data = []
-    car_data = []
-
-    # 1.生成人类的真实世界坐标系位置，[u,v,w,h],预测位置 0.08m/帧
-    for i in range(NUM_PERSON):
-        # 找到真实点
-        now_point = start_point_human[:]
-        # idx = random.randint(0, 1)  # x,y 两个方向随机
-        idx = 0
-        now_point[idx] = now_point[idx] + i*0.08
-        gt_point, bbox, pred = sim_camrea.generate_simulation(now_point, [
-                                                              10, 30])
-        human_data.append([gt_point, bbox])
-        unity_data["data"].append({"id": 10, "point": gt_point})
-        unity_data["data"].append({"id": 11, "point": pred})
-
-    # 1.生成车辆的真实世界坐标系位置，[u,v,w,h],预测位置 0.8m/帧
-    for i in range(NUM_CAR):
-        # 找到真实点
-        now_point = start_point_vehicle[:]
-        idx = random.randint(0, 1)  # x,y 两个方向随机
-        now_point[idx] = now_point[idx] + i*0.8
-        gt_point, bbox, pred = sim_camrea.generate_simulation(now_point, [
-                                                              40, 60])
-        car_data.append([gt_point, bbox])
-        if args.gen_unity:
-            unity_data["data"].append({"id": 20, "point": gt_point})
-            unity_data["data"].append({"id": 21, "point": pred})
-        # print("gt_point", gt_point)
-        # print("pred", pred)
-
-    if args.gen_unity:
-        with open(args.unity_data, 'w') as outfile:
-            json_data = json.dumps(unity_data)
-            outfile.write(json_data)
-
-    start_timestamp = 1701482850000  # unix 时间戳 2023-12-02 10:07:30.000 ms 起始时间
-    uav_id = 1
-    camera_id = 1
-
-    data = {
-        "timestamp": None,
-        "uav_id": uav_id,
-        "camera_id": camera_id,
-        "camera_params": {
-            "pose": pose,  # [yaw,pitch,roll,x,y,z]
-            "K": K,        # [fx,fy,cx,cy]
-            "distortion": distortion,  # [k1,k2,p1,p2]
-            "obj_img": None
-        },
-        "obj_cnt": None,
-        "objs": [],
-    }
-
-    obj = {
-        "tracker_id": 1,
-        "cls_id": 1,
-        "bbox": [
-            39.49999532739537,
-            237.00004132221807,
-            1.0,
-            3.0
-        ],
-        "loc": None
-    }
-
     sim_data = {"data": []}
 
-    # 生成json数据
-    for i in range(len(human_data)):
-        data["timestamp"] = start_timestamp + i*40 + random.randint(-10, 10)
-        data["obj_cnt"] = 2
-        data["objs"]=[]
-        # 人
-        obj["tracker_id"] = 1
-        obj["cls_id"] = 0
-        obj["bbox"] = human_data[i][1]
-        obj["loc"] = human_data[i][0]
-        data["objs"].append(obj.copy())
+    start_timestamp = 1701482850000  # unix 时间戳 2023-12-02 10:07:30.000 ms 起始时间
 
-        # 车
-        obj["tracker_id"] = 2
-        obj["cls_id"] = 1
-        obj["bbox"] = car_data[i][1]
-        obj["loc"] = car_data[i][0]
-        data["objs"].append(obj.copy())
+    for i in tqdm(range(NUM_FRAME)):
+        for uav_id, camera in enumerate(camera_list):
+            sim_package = copy.deepcopy(data_json)
+            sim_package["timestamp"] = start_timestamp + \
+                i*40 + random.randint(-10, 10)
+            sim_package["uav_id"] = uav_id
+            sim_package["camera_id"] = uav_id
+            sim_package["camera_params"]["pose"], sim_package["camera_params"][
+                "K"], sim_package["camera_params"]["distortion"] = camera.get_params()
 
-        sim_data["data"].append(data.copy())    # 深拷贝
+            for idx in range(len(objs)):
+
+                if objs[idx].age[uav_id] > objs[idx].max_age:
+                    # 超过最大age，表示跟丢，重置tracker_id,重置age
+                    objs[idx].tracker_id[uav_id] = -1
+                    objs[idx].reset_age(uav_id)
+
+                sim_obj_data = copy.deepcopy(obj_json)
+                status, data = camera.get_bbox_result(
+                    objs[idx].next_point(), objs[idx].get_bbox_size())
+                if status == PointType.ValidPoint:
+                    if objs[idx].tracker_id[uav_id] == -1:
+                        # 新目标, 赋值tracker_id
+                        objs[idx].tracker_id[uav_id] = camera.get_max_id()
+                        camera_list[uav_id].max_id += 1
+
+                    sim_obj_data["tracker_id"] = objs[idx].tracker_id[uav_id]
+                    sim_obj_data["cls_id"] = objs[idx].get_clsid()
+                    sim_obj_data["bbox"] = data[0]
+                    sim_obj_data["loc"] = data[1]
+                    sim_obj_data["uid"] = objs[idx].uid
+
+                    sim_package["objs"].append(sim_obj_data)
+                    objs[idx].reset_age(uav_id)  # 重置age
+                else:
+                    objs[idx].age[uav_id] += 1
+
+            sim_package["obj_cnt"] = len(sim_package["objs"])
+            if not sim_package["obj_cnt"] == 0:
+                sim_data["data"].append(sim_package)
+
+    # if args.gen_unity:
+    #     with open(args.unity_data, 'w') as outfile:
+    #         json_data = json.dumps(unity_data)
+    #         outfile.write(json_data)
+
     if args.gen_sim:
         with open(args.sim_data, 'w') as outfile:
             json_data = json.dumps(sim_data)

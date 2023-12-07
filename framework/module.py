@@ -21,6 +21,10 @@ class Package:
         self.tracker_id: int = None
         self.uav_pos: list[float] = []
         self.obj_img: str = None
+
+        # for evaluation
+        self.uid = None
+
         # read & write
         self.global_id: int = None
         self.local_id: int = None
