@@ -5,6 +5,7 @@ import numpy as np
 from enum import Enum
 import math
 
+
 class PointType(Enum):
     ValidPoint = 0  # 有效点
     NonePoint = 1  # 无交点
@@ -89,6 +90,7 @@ def undistort_pixel_coords(pixel_coords, camera_K_inv, distortion_coeffs):
     p_cam_distorted = np.array([x_correction, y_correction, 1.]).reshape(3, 1)
     return p_cam_distorted
 
+
 class ImageView:
     def __init__(self, shape: Union[tuple, list], bbox_type='cxcywh'):
         self.shape = shape
@@ -128,7 +130,8 @@ class ImageView:
             return False
         else:
             return True
-        
+
+
 class SimulationObject:
     def __init__(self, start_point, speed, bbox_size, class_id, move_angle, num_view, max_age=10, uid=None):
         self.start_point = start_point[:]
@@ -175,7 +178,8 @@ class SimulationCamera:
         self.rotation_matrix, self.translation_vector, self.camera_rotation_inv = self.create_pose(
             self.pose)
 
-        self.img = ImageView(img_shape, bbox_type)
+        self.img_shape = img_shape
+        self.img = ImageView(self.img_shape, bbox_type)
 
         self.threshold = threshold  # 判断是否被遮挡的阈值
 
@@ -183,6 +187,9 @@ class SimulationCamera:
 
     def get_params(self):
         return self.pose, self.K, self.distort
+
+    def get_max_id(self):
+        return self.max_id
 
     def create_pose(self, poses):
         rotation_matrix_i, translation_vector_i = set_camera_pose(poses)
@@ -200,32 +207,25 @@ class SimulationCamera:
         triangles = np.array(triangles, dtype='f4')  # 一定要有这一行，不然会有错。
         return triangles
 
-    def get_max_id(self):
-        return self.max_id
+    def get_scope(self):
+        vertex = [[0, 0,], [0, self.img_shape[0]], [
+            self.img_shape[1], self.img_shape[0]], [self.img_shape[1], 0]]  # 顺时针
+        
+        # TODO: 完成获取视场范围
+        return vertex
 
-    # gt_gis_point[x,y] to  bbox   空间三维点到像平面的二维点
-    def get_bbox_result(self, gt_point, bbox_size: Union[tuple, list]):
-
+    def get_z(self, point):
         # 根据 xy找z
-        ray_origins = np.array([gt_point[0], gt_point[1], 200]).reshape(3, 1)
+        ray_origins = np.array([point[0], point[1], 200]).reshape(3, 1)
         ray_directions = [0, 0, -1.]
         result = mesh_raycast.raycast(ray_origins, ray_directions, self.mesh)
         if len(result) == 0:  # TODO 可优化
-            return PointType.NonePoint, []  # 地图空洞，无交点
-
+            return PointType.NonePoint, ()  # 地图空洞，无交点
         result_point = min(result, key=lambda x: x['distance'])[
             'point']  # 地图有交点 TODO: 需不需要判断cos值，防止与三角面的法向量相反，交在背面
+        return PointType.ValidPoint, result_point
 
-        p_c1 = self.camera_rotation_inv@(result_point-self.translation_vector)
-        p_cd = p_c1/p_c1[2]
-        pixel = self.camera_K@p_cd
-
-        # 正向求解
-        pixel = [pixel[0][0], pixel[1][0]]
-        bbox = self.img.get_bbox(pixel, bbox_size)
-        if bbox == PointType.OOC:
-            return PointType.OOC, ()  # 图像外
-
+    def pixel2point(self, pixel):
         p_c1 = undistort_pixel_coords(
             pixel, self.camera_K_inv, self.distortion_coeffs)
         pc_d = p_c1 / np.linalg.norm(p_c1)
@@ -235,11 +235,39 @@ class SimulationCamera:
         result = mesh_raycast.raycast(ray_origins, ray_directions, self.mesh)
         if len(result) == 0:  # TODO 可优化
             return PointType.NonePoint, ()  # 地图空洞，无交点
-
-        pred_point = min(result, key=lambda x: x['distance'])[
+        result_point = min(result, key=lambda x: x['distance'])[
             'point']  # 地图有交点 TODO: 需不需要判断cos值，防止与三角面的法向量相反，交在背面
+        return PointType.ValidPoint, result_point
 
-        if abs(pred_point[0] - gt_point[0]) > self.threshold or abs(pred_point[1] - gt_point[1]) > self.threshold:  # 遮挡
+    def point2pixel(self, point):
+        p_c1 = self.camera_rotation_inv@(point-self.translation_vector)
+        p_cd = p_c1/p_c1[2]
+        pixel = self.camera_K@p_cd
+        return [pixel[0][0], pixel[1][0]]
+
+    # gt_gis_point[x,y] to  bbox   空间三维点到像平面的二维点
+    def get_bbox_result(self, gt_point, bbox_size: Union[tuple, list]):
+
+        # 根据 xy找z
+        status, result_point = self.get_z(gt_point)
+        if status != PointType.ValidPoint:
+            return status, ()
+
+        # 逆向求解
+        pixel = self.point2pixel(result_point)
+
+        # 判断是否在图像内
+        bbox = self.img.get_bbox(pixel, bbox_size)
+        if bbox == PointType.OOC:
+            return PointType.OOC, ()  # 图像外
+
+        # 正向求解
+        status, pred_point = self.pixel2point(pixel)
+        if status != PointType.ValidPoint:
+            return status, ()
+
+        # 判断是否被遮挡
+        if np.linalg.norm(pred_point-result_point) > self.threshold:
             return PointType.Obscured, ()
         else:
             return PointType.ValidPoint, (bbox, result_point, pred_point)
