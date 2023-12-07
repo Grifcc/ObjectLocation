@@ -207,12 +207,24 @@ class SimulationCamera:
         triangles = np.array(triangles, dtype='f4')  # 一定要有这一行，不然会有错。
         return triangles
 
-    def get_scope(self):
-        vertex = [[0, 0,], [0, self.img_shape[0]], [
-            self.img_shape[1], self.img_shape[0]], [self.img_shape[1], 0]]  # 顺时针
-        
-        # TODO: 完成获取视场范围
-        return vertex
+    def get_scope(self, camera_index, height):
+        W, H = self.img_shape
+        lt = np.array([[0., 0, 1]], dtype=np.float32).reshape(3,1)
+        rt = np.array([[W-1, 0, 1.]], dtype=np.float32).reshape(3,1)
+        rd = np.array([[W-1, H-1, 1.]], dtype=np.float32).reshape(3,1)
+        ld = np.array([[0., H-1, 1.]], dtype=np.float32).reshape(3,1)
+        uvs = [lt, rt, rd, ld] # 左上、右上、右下、左下
+        inter_points = []
+        for uv in uvs:
+            p_cam = np.linalg.inv(self.camera_K) @ uv
+            p_world = self.rotation_matrix @ p_cam
+            ray_o = self.translation_vector
+            ray_d = p_world / np.linalg.norm(p_world)
+            ray_d = ray_d.flatten()
+            t =  (height-ray_o[2])/ray_d[2]
+            inter_point = ray_o + t * ray_d
+            inter_points.append(inter_point.flatten())
+        return inter_points
 
     def get_z(self, point):
         # 根据 xy找z
