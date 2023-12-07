@@ -82,6 +82,39 @@ def undistort_pixel_coords(pixel_coords, camera_K_inv, distortion_coeffs):
     return p_cam_distorted
 
 
+def get_rays_corners(H, W, K, R, t):
+    lt = np.array([[0., 0, 1]], dtype=np.float32).reshape(3,1)
+    rt = np.array([[W-1, 0, 1.]], dtype=np.float32).reshape(3,1)
+    rd = np.array([[W-1, H-1, 1.]], dtype=np.float32).reshape(3,1)
+    ld = np.array([[0., H-1, 1.]], dtype=np.float32).reshape(3,1)
+ 
+    # 定义图像的四个角点坐标（左上、右上、右下、左下）
+    uvs = [lt, rt, rd, ld]
+    rays_o = [] #射线起点，其实都一样 TODO
+    rays_d = [] # 射线方向
+    for uv in uvs:
+        p_cam = np.linalg.inv(K) @ uv
+        p_world = R @ p_cam
+        ray_o = t
+        ray_d = p_world / np.linalg.norm(p_world)
+        rays_o.append(ray_o)
+        rays_d.append(ray_d)
+    return rays_o, rays_d
+
+
+def compute_xy_coordinate(rays_o, rays_d):
+    inter_points = []
+    for i in range(4):
+        # 计算射线与XY平面的交点的t值 o+td = 0
+        t = -rays_o[i][2] / rays_d[i][2]
+
+        # 计算交点坐标
+        inter_point = rays_o[i] + t * rays_d[i]
+        inter_points.append(inter_point.flatten())
+
+    return inter_points
+
+
 class SimulationCamera:
     def __init__(self, camera_pose, camera_K, distortion_coeffs, mesh_path):
         self.camera_pose = camera_pose
