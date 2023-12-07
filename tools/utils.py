@@ -3,7 +3,7 @@ import trimesh
 import mesh_raycast
 import numpy as np
 from enum import Enum
-
+import math
 
 class PointType(Enum):
     ValidPoint = 0  # 有效点
@@ -12,47 +12,6 @@ class PointType(Enum):
     OOF = 3   # 视场外 out of FOV
     OOC = 4  # 图像外 out of camera
     Other = -1  # 其他
-
-
-class ImageView:
-    def __init__(self, shape: Union[tuple, list], bbox_type='cxcywh'):
-        self.shape = shape
-        self.width = shape[0]
-        self.height = shape[1]
-        self.bbox_type = bbox_type
-        self.get_bbox = None
-        if bbox_type == 'cxcywh':
-            self.get_bbox = self._get_cxcywh
-        elif bbox_type == 'x1y1x2y2':
-            self.get_bbox = self._get_x1y1x2y2
-        elif bbox_type == 'xywh':
-            self.get_bbox = self._get_xywh
-        else:
-            raise ValueError("bbox_type must be 'cxcywh' or 'x1y1x2y2'")
-
-    def _get_cxcywh(self, point: Union[tuple, list], bbox_size: Union[tuple, list]):
-        if self.valid_point(point):
-            return [point[0], point[1] - bbox_size[1]/2, bbox_size[0], bbox_size[1]]
-        else:
-            return PointType.OOC
-
-    def _get_x1y1x2y2(self, point: Union[tuple, list], bbox_size: Union[tuple, list]):
-        if self.valid_point(point):
-            return [point[0]-bbox_size[0], point[1]-bbox_size[1], point[0]+bbox_size[0]/2, bbox_size[1]]
-        else:
-            return PointType.OOC
-
-    def _get_xywh(self, point: Union[tuple, list], bbox_size: Union[tuple, list]):
-        if self.valid_point(point):
-            return [point[0] - bbox_size[0]/2, point[1]-bbox_size[1], bbox_size[0], bbox_size[1]]
-        else:
-            return PointType.OOC
-
-    def valid_point(self, point: Union[tuple, list]):
-        if point[0] < 0 or point[1] < 0 or point[0] >= self.width or point[1] >= self.height:
-            return False
-        else:
-            return True
 
 
 def set_K(cam_K):
@@ -130,15 +89,54 @@ def undistort_pixel_coords(pixel_coords, camera_K_inv, distortion_coeffs):
     p_cam_distorted = np.array([x_correction, y_correction, 1.]).reshape(3, 1)
     return p_cam_distorted
 
+class ImageView:
+    def __init__(self, shape: Union[tuple, list], bbox_type='cxcywh'):
+        self.shape = shape
+        self.width = shape[0]
+        self.height = shape[1]
+        self.bbox_type = bbox_type
+        self.get_bbox = None
+        if bbox_type == 'cxcywh':
+            self.get_bbox = self._get_cxcywh
+        elif bbox_type == 'x1y1x2y2':
+            self.get_bbox = self._get_x1y1x2y2
+        elif bbox_type == 'xywh':
+            self.get_bbox = self._get_xywh
+        else:
+            raise ValueError("bbox_type must be 'cxcywh' or 'x1y1x2y2'")
 
+    def _get_cxcywh(self, point: Union[tuple, list], bbox_size: Union[tuple, list]):
+        if self.valid_point(point):
+            return [point[0], point[1] - bbox_size[1]/2, bbox_size[0], bbox_size[1]]
+        else:
+            return PointType.OOC
+
+    def _get_x1y1x2y2(self, point: Union[tuple, list], bbox_size: Union[tuple, list]):
+        if self.valid_point(point):
+            return [point[0]-bbox_size[0], point[1]-bbox_size[1], point[0]+bbox_size[0]/2, bbox_size[1]]
+        else:
+            return PointType.OOC
+
+    def _get_xywh(self, point: Union[tuple, list], bbox_size: Union[tuple, list]):
+        if self.valid_point(point):
+            return [point[0] - bbox_size[0]/2, point[1]-bbox_size[1], bbox_size[0], bbox_size[1]]
+        else:
+            return PointType.OOC
+
+    def valid_point(self, point: Union[tuple, list]):
+        if point[0] < 0 or point[1] < 0 or point[0] >= self.width or point[1] >= self.height:
+            return False
+        else:
+            return True
+        
 class SimulationObject:
     def __init__(self, start_point, speed, bbox_size, class_id, move_angle, num_view, max_age=10, uid=None):
-        self.start_point = start_point
+        self.start_point = start_point[:]
         self.speed = speed
         self.class_id = class_id
-        self.move_angle = move_angle
-        self.now_point = start_point
-        self.bbox_size = bbox_size
+        self.move_angle = move_angle * math.pi / 180
+        self.now_point = start_point[:]
+        self.bbox_size = bbox_size[:]
         self.uid = uid if uid else id(self)
         self.tracker_id = [-1] * num_view
         self.max_age = max_age
@@ -241,7 +239,7 @@ class SimulationCamera:
         pred_point = min(result, key=lambda x: x['distance'])[
             'point']  # 地图有交点 TODO: 需不需要判断cos值，防止与三角面的法向量相反，交在背面
 
-        if pred_point[0] - gt_point[0] > self.threshold or pred_point[1] - gt_point[1] > self.threshold:  # 遮挡
+        if abs(pred_point[0] - gt_point[0]) > self.threshold or abs(pred_point[1] - gt_point[1]) > self.threshold:  # 遮挡
             return PointType.Obscured, ()
         else:
             return PointType.ValidPoint, (bbox, result_point, pred_point)
