@@ -138,7 +138,9 @@ class SimulationCamera:
         self.camera_K, self.camera_K_inv = set_K(camera_K)
         self.distortion_coeffs = set_distortion_coeffs(distortion_coeffs)
         self.mesh = self.read_mesh(mesh_path)
-        self.poses = self.create_pose(poses)
+        self.rotation_matrix, self.translation_vector, self.camera_rotation_inv = self.create_pose(
+            poses)
+
         self.img = ImageView(img_shape, bbox_type)
 
         self.threshold = threshold  # 判断是否被遮挡的阈值
@@ -146,9 +148,7 @@ class SimulationCamera:
     def create_pose(self, poses):
         rotation_matrix_i, translation_vector_i = set_camera_pose(poses)
         camera_rotation_inv_i = np.linalg.inv(rotation_matrix_i)
-        self.rotation_matrix.append(rotation_matrix_i)
-        self.translation_vector.append(translation_vector_i)
-        self.camera_rotation_inv.append(camera_rotation_inv_i)
+        return rotation_matrix_i, translation_vector_i, camera_rotation_inv_i
 
     def read_mesh(self, mesh_path):
         mesh = trimesh.load_mesh(mesh_path)
