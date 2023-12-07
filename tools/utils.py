@@ -1,9 +1,58 @@
-import json
-import os
+from typing import Union
 import trimesh
 import mesh_raycast
 import numpy as np
-import time
+from enum import Enum
+
+
+class PointType(Enum):
+    ValidPoint = 0  # 有效点
+    NonePoint = 1  # 无交点
+    Obscured = 2  # 遮挡
+    OOF = 3   # 视场外 out of FOV
+    OOC = 4  # 图像外 out of camera
+    Other = -1  # 其他
+
+
+class ImageView:
+    def __init__(self, shape: Union[tuple, list], bbox_type='cxcywh'):
+        self.shape = shape
+        self.width = shape[0]
+        self.height = shape[1]
+        self.bbox_type = bbox_type
+        self.get_bbox = None
+        if bbox_type == 'cxcywh':
+            self.get_bbox = self._get_cxcywh
+        elif bbox_type == 'x1y1x2y2':
+            self.get_bbox = self._get_x1y1x2y2
+        elif bbox_type == 'xywh':
+            self.get_bbox = self._get_xywh
+        else:
+            raise ValueError("bbox_type must be 'cxcywh' or 'x1y1x2y2'")
+
+    def _get_cxcywh(self, point: Union[tuple, list]):
+        if self.valid_point(point):
+            return [point[0], point[1]-self.height/2, self.width, self.height]
+        else:
+            return PointType.OOC
+
+    def _get_x1y1x2y2(self, point: Union[tuple, list]):
+        if self.valid_point(point):
+            return [point[0]-self.width/2, point[1]-self.height, point[0]+self.width/2, point[1]]
+        else:
+            return PointType.OOC
+
+    def _get_xywh(self, point: Union[tuple, list]):
+        if self.valid_point(point):
+            return [point[0]-self.width/2, point[1]-self.height, point[0], point[1]]
+        else:
+            return PointType.OOC
+
+    def valid_point(self, point: Union[tuple, list]):
+        if point[0] < 0 or point[1] < 0 or point[0] >= self.width or point[1] >= self.height:
+            return False
+        else:
+            return True
 
 
 def set_K(cam_K):
@@ -82,51 +131,24 @@ def undistort_pixel_coords(pixel_coords, camera_K_inv, distortion_coeffs):
     return p_cam_distorted
 
 
-def get_rays_corners(H, W, K, R, t):
-    lt = np.array([[0., 0, 1]], dtype=np.float32).reshape(3,1)
-    rt = np.array([[W-1, 0, 1.]], dtype=np.float32).reshape(3,1)
-    rd = np.array([[W-1, H-1, 1.]], dtype=np.float32).reshape(3,1)
-    ld = np.array([[0., H-1, 1.]], dtype=np.float32).reshape(3,1)
- 
-    # 定义图像的四个角点坐标（左上、右上、右下、左下）
-    uvs = [lt, rt, rd, ld]
-    rays_o = [] #射线起点，其实都一样 TODO
-    rays_d = [] # 射线方向
-    for uv in uvs:
-        p_cam = np.linalg.inv(K) @ uv
-        p_world = R @ p_cam
-        ray_o = t
-        ray_d = p_world / np.linalg.norm(p_world)
-        rays_o.append(ray_o)
-        rays_d.append(ray_d)
-    return rays_o, rays_d
-
-
-def compute_xy_coordinate(rays_o, rays_d):
-    inter_points = []
-    for i in range(4):
-        # 计算射线与XY平面的交点的t值 o+td = 0
-        t = -rays_o[i][2] / rays_d[i][2]
-
-        # 计算交点坐标
-        inter_point = rays_o[i] + t * rays_d[i]
-        inter_points.append(inter_point.flatten())
-
-    return inter_points
-
-
 class SimulationCamera:
-    def __init__(self, camera_pose, camera_K, distortion_coeffs, mesh_path):
-        self.camera_pose = camera_pose
+    def __init__(self, poses, camera_K, distortion_coeffs, mesh_path, img_shape, threshold=1.5, bbox_type='cxcywh'):
+        self.K = camera_K
+        self.distort = distortion_coeffs
         self.camera_K, self.camera_K_inv = set_K(camera_K)
-
-        self.rotation_matrix, self.translation_vector = set_camera_pose(
-            self.camera_pose)
-        self.camera_rotation_inv = np.linalg.inv(self.rotation_matrix)
-
         self.distortion_coeffs = set_distortion_coeffs(distortion_coeffs)
-
         self.mesh = self.read_mesh(mesh_path)
+        self.poses = self.create_pose(poses)
+        self.img = ImageView(img_shape, bbox_type)
+
+        self.threshold = threshold  # 判断是否被遮挡的阈值
+
+    def create_pose(self, poses):
+        rotation_matrix_i, translation_vector_i = set_camera_pose(poses)
+        camera_rotation_inv_i = np.linalg.inv(rotation_matrix_i)
+        self.rotation_matrix.append(rotation_matrix_i)
+        self.translation_vector.append(translation_vector_i)
+        self.camera_rotation_inv.append(camera_rotation_inv_i)
 
     def read_mesh(self, mesh_path):
         mesh = trimesh.load_mesh(mesh_path)
@@ -137,31 +159,31 @@ class SimulationCamera:
         faces = combined_mesh.faces
         triangles = vertices[faces]
         triangles = np.array(triangles, dtype='f4')  # 一定要有这一行，不然会有错。
-        mesh = triangles
         return triangles
 
-    def generate_simulation(self, point, obj_size: list):
-        ray_origins = np.array([point[0], point[1], 200]).reshape(3, 1)
+    # gt_gis_point[x,y] to  bbox   空间三维点到像平面的二维点
+    def get_bbox_result(self, gt_point) -> list:
+
+        # 根据 xy找z
+        ray_origins = np.array([gt_point[0], gt_point[1], 200]).reshape(3, 1)
         ray_directions = [0, 0, -1.]
         result = mesh_raycast.raycast(ray_origins, ray_directions, self.mesh)
         if len(result) == 0:  # TODO 可优化
-            result_point = [0.0, 0.0, 0.0]
-        else:
-            first_result = min(result, key=lambda x: x['distance'])
-            result_point = first_result['point']
+            return PointType.NonePoint, []  # 地图空洞，无交点
 
-        result_point = list(result_point)
-        real_point = result_point[:]
+        result_point = min(result, key=lambda x: x['distance'])[
+            'point']  # 地图有交点 TODO: 需不需要判断cos值，防止与三角面的法向量相反，交在背面
 
-        result_point = np.array(result_point).reshape(3, 1)
         p_c1 = self.camera_rotation_inv@(result_point-self.translation_vector)
         p_cd = p_c1/p_c1[2]
         pixel = self.camera_K@p_cd
 
-        # [cx,cy,w,h]
-        img_pixel = [pixel[0][0]-obj_size[0]/2., pixel[1][0]-obj_size[1], obj_size[0], obj_size[1]]
-        # 找到预测点
+        # 正向求解
         pixel = [pixel[0][0], pixel[1][0]]
+        bbox = self.img.get_bbox(pixel)
+        if bbox == PointType.OOC:
+            return PointType.OOC, ()  # 图像外
+
         p_c1 = undistort_pixel_coords(
             pixel, self.camera_K_inv, self.distortion_coeffs)
         pc_d = p_c1 / np.linalg.norm(p_c1)
@@ -170,11 +192,12 @@ class SimulationCamera:
         ray_directions = pw_d.flatten()
         result = mesh_raycast.raycast(ray_origins, ray_directions, self.mesh)
         if len(result) == 0:  # TODO 可优化
-            result_point = np.array([0., 0, 0]).reshape(3, 1)
+            return PointType.NonePoint, ()  # 地图空洞，无交点
+
+        pred_point = min(result, key=lambda x: x['distance'])[
+            'point']  # 地图有交点 TODO: 需不需要判断cos值，防止与三角面的法向量相反，交在背面
+
+        if pred_point[0] - gt_point[0] > self.threshold or pred_point[1] - gt_point[1] > self.threshold:  # 遮挡
+            return PointType.Obscured, ()
         else:
-            first_result = min(result, key=lambda x: x['distance'])
-            result_point = first_result['point']
-
-        pred_point = list(result_point)
-
-        return real_point, img_pixel, pred_point
+            return PointType.ValidPoint, (bbox, result_point, pred_point)
