@@ -222,8 +222,8 @@ class SimulationCamera:
             ray_d = p_world / np.linalg.norm(p_world)
             ray_d = ray_d.flatten()
             t = (height-ray_o[2])/ray_d[2]
-            inter_point = ray_o + t * ray_d
-            inter_points.append(inter_point.flatten())
+            inter_point = ray_o + t * np.array(ray_d).reshape(3, 1)
+            inter_points.append(inter_point.flatten().tolist())
         return inter_points
 
     def get_z(self, point):
