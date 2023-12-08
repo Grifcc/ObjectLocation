@@ -32,7 +32,7 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(add_help=True)
     parser.add_argument(
-        '--mesh_path', default='data/odm_textured_model_geo.obj', type=str, help='Path of map mesh')
+        '--mesh_path', default='data/JiulongLake.obj', type=str, help='Path of map mesh')
     parser.add_argument('--duration', default=30, type=int,
                         help='Required amount of simulated data,unit: second')
     parser.add_argument('--fps', default=24, type=int,
