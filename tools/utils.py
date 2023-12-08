@@ -133,11 +133,11 @@ class ImageView:
 
 
 class SimulationObject:
-    def __init__(self, start_point, speed, bbox_size, class_id, move_angle, num_view, max_age=10, uid=None):
+    def __init__(self, start_point, angle, speed, bbox_size, class_id, num_view, max_age=10, uid=None):
         self.start_point = start_point[:]
         self.speed = speed
         self.class_id = class_id
-        self.move_angle = move_angle * math.pi / 180
+        self.move_angle = angle * math.pi / 180
         self.now_point = start_point[:]
         self.bbox_size = bbox_size[:]
         self.uid = uid if uid else id(self)
@@ -279,7 +279,7 @@ class SimulationCamera:
             return status, ()
 
         # 判断是否被遮挡
-        if np.linalg.norm(pred_point-result_point) > self.threshold:
+        if np.linalg.norm(np.array(pred_point)-np.array(result_point)) > self.threshold:
             return PointType.Obscured, ()
         else:
             return PointType.ValidPoint, (bbox, result_point, pred_point)

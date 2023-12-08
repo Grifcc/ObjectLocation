@@ -82,25 +82,21 @@ if __name__ == "__main__":
         camera_list.append(SimulationCamera(
             pose, K, distortion, MESH_PATH, SHAPE))
 
-    # 目标的起始xy位置
-    person1 = [100., 0.]  # 右下角走 # # TODO 这个起始点很难选。容易观测不到 ，我这里只是试一下
-    car2 = [-200., 80.]  # 右下角走
-    person3 = [-200., 50.]  # 右上角走
-    car4 = [-200., -120.]  # 右上角走
-    person5 = [-200., -140.]  # 右上角走
+    # 目标的起始xy位置和运动方向
+    with open("data/objects.json", "r") as f:
+        ori_data = json.load(f)
 
-    objs_start_points = [person1, car2, person3, car4, person5]
-    objs_ids = [0, 1, 0, 1, 0]
     BBOX_SZIE = [[10, 20], [40, 20]]
     objs = []
-    for idx, start_point in enumerate(objs_start_points):
-        clsid = objs_ids[idx]
+    for obj in ori_data["objects"]:
+        clsid = obj["cls_id"]
         objs.append(SimulationObject(
-            start_point, SPEED[clsid]/FRAME_RATE, BBOX_SZIE[clsid], clsid, 45, len(camera_list), max_age=2, uid=idx))
+            obj["start_point"],obj["angle"], obj["speed"]/FRAME_RATE, BBOX_SZIE[clsid], clsid, len(camera_list), max_age=2, uid=obj["uid"]))
 
     unity_data = {
         "data": []
     }
+
     sim_data = {"data": []}
 
     start_timestamp = 1701482850000  # unix 时间戳 2023-12-02 10:07:30.000 ms 起始时间
