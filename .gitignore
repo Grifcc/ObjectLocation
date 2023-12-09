@@ -64,6 +64,8 @@ celerybeat-schedule
 python-mesh-raycast/
 
 *.json
+!data/
+
 #vscode
 .vscode/
 
