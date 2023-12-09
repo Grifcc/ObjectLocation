@@ -281,7 +281,7 @@ class SimulationCamera:
         如果地图有交点,返回 PointType.ValidPoint 和交点坐标 result_point
 
         """
-        assert not self.mesh  is None, "mesh is None"
+        assert not self.mesh is None, "mesh is None"
         p_c1 = undistort_pixel_coords(
             pixel, self.camera_K_inv, self.distortion_coeffs)
         pc_d = p_c1 / np.linalg.norm(p_c1)
@@ -306,6 +306,7 @@ class SimulationCamera:
         像素坐标,形如 [x_pixel, y_pixel]
 
         """
+        point = np.array(point).reshape(3, 1)
         p_c1 = self.camera_rotation_inv@(point-self.translation_vector)
         p_cd = p_c1/p_c1[2]
         pixel = self.camera_K@p_cd
@@ -326,7 +327,7 @@ class SimulationCamera:
         如果有效,返回 PointType.ValidPoint 和包含边界框、真实点坐标和预测点坐标的元组 (bbox, result_point, pred_point)
 
         """
-        assert not self.mesh  is None, "mesh is None"
+        assert not self.mesh is None, "mesh is None"
         # 根据 xy 找到对应的真实点坐标
         status, result_point = get_real_point(gt_point, self.mesh)
         if status != PointType.ValidPoint:
