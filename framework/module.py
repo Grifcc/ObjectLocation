@@ -21,17 +21,35 @@ class Package:
         self.tracker_id: int = None
         self.uav_pos: list[float] = []
         self.obj_img: str = None
+
+        # for evaluation
+        self.uid = None
+
         # read & write
         self.global_id: int = None
         self.local_id: int = None
         self.location: list[float] = []  # (WGS84）
 
+        self.bbox_type = "cxcywh"
+
     def get_center_point(self) -> list[float]:
         # 均按底边中点计入
-        return [self.Bbox[0]+self.Bbox[2]/2., self.Bbox[1]+self.Bbox[3]]
+        if self.bbox_type == "cxcywh":
+            return [self.Bbox[0], self.Bbox[1]+self.Bbox[3]/2.]
+        elif self.bbox_type == "xyxy":
+            return [(self.Bbox[0]+self.Bbox[2])/2., (self.Bbox[1]+self.Bbox[3])/2.]
+        elif self.bbox_type == "xywh":
+            return [self.Bbox[0]+self.Bbox[2]/2., self.Bbox[1]+self.Bbox[3]/2.]
+        else:
+            AssertionError("bbox_type must be cxcywh xyxy, xywh")
 
     def copy(self):
         return copy.deepcopy(self)
+
+    def set_bbox_type(self, bbox_type):
+        assert bbox_type in ["cxcywh", "xyxy",
+                             "xywh"], "bbox_type must be cxcywh xyxy,xywh"
+        self.bbox_type = bbox_type
 
     def __str__(self):
         return f"time:{self.time}"
