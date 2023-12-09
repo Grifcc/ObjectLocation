@@ -105,9 +105,9 @@ def drawPoint(ax, t1, points, color):
 
 # 设置三个相机的位姿
 # 六个参数为：绕x,y,z轴的旋转角度，以及相机位置(x,y,z)
-R1, t1 = pose_camera(180., -30, 0, -10., -15, 6)
-R2, t2 = pose_camera(180., 30, 0, 10., -15, 6)
-R3, t3 = pose_camera(150., 0, 0, 0., -25, 6)
+R1, t1 = pose_camera(180., -30, 0, -230., 100, 200)
+R2, t2 = pose_camera(180., 30, 0, 210., 85, 200)
+R3, t3 = pose_camera(150., 0, 0, 20., 225, 200)
 
 # 获取相机的四个视角锥
 rays_o1, rays_d1 = get_rays_corners(H, W, K, R1, t1)
@@ -178,11 +178,27 @@ def visualize_obj(ax, vertices, faces):
 # vertices, faces = read_obj(obj_file_path)
 # visualize_obj(ax, vertices, faces)
 
-def track(ax, points):
-    for i in range(1):
-        ax.scatter(points[0][0], points[1][0], points[2][0], c='b', marker='o')
-real_point = np.array([-6.366050, -30.999302 ,-0.982937 ]).reshape(3,1)
-track(ax, real_point)
+def track(ax, obj, color):
+    for i in range(len(obj)):
+        ax.scatter(obj[i][0][0], obj[i][1][0], obj1[i][2][0], c=color, marker='o')
+    
+      
+real_point1 = np.array([-120, 53.09 ,40.87 ]).reshape(3,1)
+real_point2 = np.array([-36.8, 122.3 ,77.7 ]).reshape(3,1)
+real_point3 = np.array([-31.192, 39.677, 121.91]).reshape(3,1)
+real_point4 = np.array([-83.817, 96.801, 50.425]).reshape(3,1)
+real_point5 = np.array([-24.135, 181, 60.323]).reshape(3,1)
+real_point6 = np.array([-41.853, 65.518, 100.61]).reshape(3,1)
+real_point7 = np.array([-31.44, 167.94, 60.42]).reshape(3,1)
+real_point8 = np.array([0.65996, 0.62084,0.25765]).reshape(3,1)
+obj1 = [real_point1, real_point2]  
+obj2 = [real_point3, real_point4]  
+obj3 = [real_point5, real_point6]  
+obj4 = [real_point7, real_point8]  
+track(ax, obj1, 'r')
+track(ax, obj2, 'g')
+track(ax, obj3, 'b')
+track(ax, obj4, 'y')
 
 ax.set_xlabel('X')
 ax.set_ylabel('Y')
