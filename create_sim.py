@@ -33,65 +33,46 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(add_help=True)
     parser.add_argument(
         '--mesh_path', default='data/JiulongLake.obj', type=str, help='Path of map mesh')
-    parser.add_argument('--duration', default=30, type=int,
-                        help='Required amount of simulated data,unit: second')
-    parser.add_argument('--fps', default=24, type=int,
-                        help='Frame rate of camera')
-    parser.add_argument('--speed', default=[2, 20], type=list,
-                        help="The object's movement speed, default:person 2 m/s, car 20 m/s [2,20].")
-    parser.add_argument('--shape', default=[640, 480], type=list,
-                        help="simulated image size, default:[640,480]")
-    parser.add_argument('--gen_unity',  action='store_true',
-                        help='Whether to generate unity data')
-    parser.add_argument('--gen_sim',  action='store_true',
-                        help='Whether to generate sim data')
-    parser.add_argument('--unity_data', default='data/unit_data.json',
+    parser.add_argument('--cameras_cfg', default="data/cameras.json", type=str,
+                        help='Configuration file for camera parameters')
+    parser.add_argument('--objects', default="simulated_data/objects.json", type=str,
+                        help='Real points used for generating simulated data.')
+    parser.add_argument('--nogen_unity',  action='store_true',
+                        help='Whether to generate unity data,default: yes')
+    parser.add_argument('--nogen_sim',  action='store_true',
+                        help='Whether to generate sim data, default: yes')
+    parser.add_argument('--unity_data', default='simulated_data/unit_data.json',
                         type=str, help='Path of unit_data')
-    parser.add_argument('--sim_data', default='data/simulate_data.json',
+    parser.add_argument('--sim_data', default='simulated_data/simulate_data.json',
                         type=str, help='Path of sim_data')
     args = parser.parse_args()
 
-    # 仿真帧率
-    FRAME_RATE = args.fps
-    # 仿真时间
-    DURATION = args.duration
-    # 仿真数据量
-    NUM_FRAME = FRAME_RATE * DURATION
+    # 根据配置文件解析相机参数
+    with open(args.cameras_cfg, "r") as f:
+        camera_param = json.load(f)
 
-    # 仿真物体运动速度
-    SPEED = args.speed
+    K = camera_param["K"]  # 内参
+    distortion = camera_param["D"]  # 畸变参数
+    frame_rate = camera_param["fps"]  # 帧率
+    shape = camera_param["shape"]  # 图像大小
 
-    # 图像大小
-    SHAPE = args.shape
+    cameras = []
+    for ext_param in camera_param["ext_param"]:
+        pose = [ext_param["yaw"], ext_param["pitch"], ext_param["roll"],
+                ext_param["x"], ext_param["y"], ext_param["z"]]
+        cameras.append(SimulationCamera(
+            pose, K, distortion, shape, mesh_path=args.mesh_path))
 
-    # 地图路径
-    MESH_PATH = args.mesh_path
+    # 根据配置文件解析目标参数
+    with open(args.objects, "r") as f:
+        obj_data = json.load(f)
 
-    # 内参、畸变参数、外参
-    K = [355.72670241928597, 357.6787245904993,
-         311.9712774887887, 253.00946170247045]
-    distortion = [0., 0., 0., 0., 0.]
-    cam_start = [-210., 0., 100.]
+    duration = obj_data["duration"]
 
-    pose1 = [0., -30., 180, cam_start[0], cam_start[1], cam_start[2]]
-    pose2 = [0., 30, 180, cam_start[0]+290., cam_start[1]-15., cam_start[2]]
-    pose3 = [0., 0, 150, cam_start[0]+210., cam_start[1]+100., cam_start[2]]
-    pose_list = [pose1, pose2, pose3]
-    camera_list = []
-    for pose in pose_list:
-        camera_list.append(SimulationCamera(
-            pose, K, distortion, MESH_PATH, SHAPE))
-
-    # 目标的起始xy位置和运动方向
-    with open("data/objects.json", "r") as f:
-        ori_data = json.load(f)
-
-    BBOX_SZIE = [[10, 20], [40, 20]]
     objs = []
-    for obj in ori_data["objects"]:
-        clsid = obj["cls_id"]
+    for obj in obj_data["objects"]:
         objs.append(SimulationObject(
-            obj["start_point"],obj["angle"], obj["speed"]/FRAME_RATE, BBOX_SZIE[clsid], clsid, len(camera_list), max_age=2, uid=obj["uid"]))
+            obj, len(cameras), max_age=2, uid=obj["uid"]))
 
     unity_data = {
         "data": []
@@ -101,15 +82,15 @@ if __name__ == "__main__":
 
     start_timestamp = 1701482850000  # unix 时间戳 2023-12-02 10:07:30.000 ms 起始时间
 
-    for i in tqdm(range(NUM_FRAME)):
-        for uav_id, camera in enumerate(camera_list):
+    for i in tqdm(range(duration*frame_rate)):
+        for uav_id, camera in enumerate(cameras):
             sim_package = copy.deepcopy(data_json)
             sim_package["timestamp"] = start_timestamp + \
                 i*40 + random.randint(-10, 10)
             sim_package["uav_id"] = uav_id
             sim_package["camera_id"] = uav_id
             sim_package["camera_params"]["pose"], sim_package["camera_params"][
-                "K"], sim_package["camera_params"]["distortion"] = camera.get_params()
+                "K"], sim_package["camera_params"]["distortion"], _ = camera.get_params()
 
             for idx in range(len(objs)):
 
@@ -125,7 +106,7 @@ if __name__ == "__main__":
                     if objs[idx].tracker_id[uav_id] == -1:
                         # 新目标, 赋值tracker_id
                         objs[idx].tracker_id[uav_id] = camera.get_max_id()
-                        camera_list[uav_id].max_id += 1
+                        cameras[uav_id].max_id += 1
 
                     sim_obj_data["tracker_id"] = objs[idx].tracker_id[uav_id]
                     sim_obj_data["cls_id"] = objs[idx].get_clsid()
@@ -142,12 +123,12 @@ if __name__ == "__main__":
             if not sim_package["obj_cnt"] == 0:
                 sim_data["data"].append(sim_package)
 
-    # if args.gen_unity:
+    # if args.nogen_unity:
     #     with open(args.unity_data, 'w') as outfile:
     #         json_data = json.dumps(unity_data)
     #         outfile.write(json_data)
 
-    if args.gen_sim:
+    if not args.nogen_sim:
         with open(args.sim_data, 'w') as outfile:
             json_data = json.dumps(sim_data)
             outfile.write(json_data)

@@ -66,3 +66,11 @@ python-mesh-raycast/
 *.json
 #vscode
 .vscode/
+
+simulated_data/
+
+# media
+*.mp4
+*.mp3
+*.png
+*.jpg
