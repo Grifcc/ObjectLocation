@@ -89,8 +89,9 @@ if __name__ == "__main__":
                 i*40 + random.randint(-10, 10)
             sim_package["uav_id"] = uav_id
             sim_package["camera_id"] = uav_id
-            sim_package["camera_params"]["pose"], sim_package["camera_params"][
-                "K"], sim_package["camera_params"]["distortion"], _ = camera.get_params()
+            sim_package["camera_params"]["pose"] = camera.pose
+            sim_package["camera_params"]["K"] = K
+            sim_package["camera_params"]["distortion"] = distortion
 
             for idx in range(len(objs)):
 
