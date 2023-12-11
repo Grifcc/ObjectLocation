@@ -101,8 +101,9 @@ class SpatialFilter(Filter):
                         local_id = local_id+1
                     for index_j, child_list_j in enumerate(list_j): # 找到与child_list_i距离最小的下标（list_j中）
                         distance = np.linalg.norm(np.array(child_list_i.location) - np.array(child_list_j.location))
-                        if distance <distance_threshold: # 如果距离小：更新距离和下标
-                            matrix_distance[index_i, index_j] = distance
+                        if not (child_list_i.local_id is not None and child_list_j.local_id is not None):
+                            if  distance <distance_threshold: # 如果距离小：更新距离和下标
+                                matrix_distance[index_i, index_j] = distance
 
                 # 找到矩阵中的最小值及其索引,找到共视点，更新local_id
                 for i in range(min(len(list_i),len(list_j))):
@@ -155,7 +156,7 @@ class SpatialFilter(Filter):
             group = sorted(group, key=lambda x: x.uav_id)
 
         #     for detect in group:
-        #         print(f"Time: {detect.time}, uav_id:{detect.uav_id},global_id:{detect.global_id}, Track ID: {detect.track_id}, local_id:{detect.local_id},  uv:{detect.boundingbox}, point:{detect.pose_location}")
+        #         print(f"Time: {detect.time}, uav_id:{detect.uav_id},global_id:{detect.global_id}, Track ID: {detect.tracker_id}, local_id:{detect.local_id}, point:{detect.location}")
         # for detect in detections_list:
         #     print(f"Time: {detect.time}, uav_id:{detect.uav_id},global_id:{detect.global_id}, Track ID: {detect.track_id}, local_id:{detect.local_id},  uv:{detect.boundingbox}, point:{detect.pose_location}")
         return grouped_detections
@@ -214,6 +215,10 @@ class SpatialFilter(Filter):
             class0_list, local_id = self.Spatial_filter1(self.distance_threshold, class0_list, local_id=local_id)
         if len(class1_list) != 0:
             class1_list, local_id = self.Spatial_filter1(self.distance_threshold, class1_list, local_id=local_id)
+        # for i in range(len(class0_list)):
+        #     for j in range(len(class0_list[i])):
+        #         package = class0_list[i][j]
+        #         print(package.uav_id, package.tracker_id, package.local_id)
         # 空间滤波2:根据local_id更新平均距离，同local_id会按照track_id排序
         group_list = self.Spatial_filter2(class0_list, class1_list)
         # global_id溯源

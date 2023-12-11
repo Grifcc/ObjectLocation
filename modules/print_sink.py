@@ -15,7 +15,7 @@ class PrintSink(Sink):
         send_data = {}
         send_data["time"] = data.time
         send_data["obj_cnt"] = 1
-        send_data["objs"] = [{"id": data.global_id, "cls": data.class_id,
+        send_data["objs"] = [{"id": data.global_id,"tr_id": data.tracker_id, "cls": data.class_id,
                               "gis": data.location, "obj_img": data.obj_img, "local_id": data.local_id}]
 
         print(send_data)
