@@ -51,6 +51,13 @@ if __name__ == "__main__":
                         type=str, help='Path of sim_data')
     args = parser.parse_args()
 
+    unity_data = {
+        "data": [],
+        "camera_params": []
+    }
+
+    sim_data = {"data": []}
+    
     # 根据配置文件解析相机参数
     with open(args.cameras_cfg, "r") as f:
         camera_param = json.load(f)
@@ -66,6 +73,13 @@ if __name__ == "__main__":
                 ext_param["x"], ext_param["y"], ext_param["z"]]
         cameras.append(SimulationCamera(
             pose, K, distortion, shape, mesh_path=args.mesh_path))
+        
+        # unity data
+        u_camera = {
+            "pose": ext_param,
+        }
+        u_camera["horizontal"], u_camera["vertical"] = cameras[-1].get_fov_angle()
+        unity_data["camera_params"].append(u_camera)
 
     # 根据配置文件解析目标参数
     with open(args.objects, "r") as f:
@@ -78,11 +92,6 @@ if __name__ == "__main__":
         objs.append(SimulationObject(
             obj, len(cameras), max_age=2, uid=obj["uid"]))
 
-    unity_data = {
-        "data": []
-    }
-
-    sim_data = {"data": []}
 
     start_timestamp = 1701482850000  # unix 时间戳 2023-12-02 10:07:30.000 ms 起始时间
 

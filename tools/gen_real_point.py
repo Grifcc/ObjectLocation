@@ -5,7 +5,6 @@ from .utils import SimulationCamera, SimulationObject, PointType, read_mesh, get
 from .gen_simulat_obj import get_attr
 import random
 from matplotlib.animation import FuncAnimation
-import argparse
 import json
 
 
@@ -129,7 +128,7 @@ def gen_real_point(args):
 
     # 绘制相机的视野范围
     for _, camera in enumerate(cameras):
-        points = camera.get_scope()
+        points = camera.get_fov_scope()
         plot_camera_fov(ax, camera.get_params()[
                         3], points, color=camera_colors[_])
 
