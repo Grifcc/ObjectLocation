@@ -81,12 +81,12 @@ def undistort_pixel_coords(pixel_coords, camera_K_inv, distortion_coeffs):
     return p_cam_distorted
 
 
-def compute_xy_coordinate(rays_o, rays_d, height=0):
+def compute_xy_coordinate(rays_o: list, rays_d: list, height=0):
     """
     计算光线与XY平面的交点坐标。
 
     Args:
-        rays_o (list): 光线起点列表。
+        rays_o : 光线起点列表。
         rays_d (list): 光线方向列表。
         height (float): 平面的高度,默认为0。
 
@@ -94,12 +94,14 @@ def compute_xy_coordinate(rays_o, rays_d, height=0):
         list: 包含光线与XY平面的交点坐标的列表。
     """
     inter_points = []
+    if not isinstance(rays_o, np.ndarray):
+        rays_d = np.array(rays_d, dtype=np.float32)
     for i in range(4):
         # 计算射线与XY平面的交点的t值 o+td = 0
-        t = (height - rays_o[i][2]) / rays_d[i][2]
+        t = (height - rays_o[2]) / rays_d[i][2]
 
         # 计算交点坐标
-        inter_point = rays_o[i] + t * rays_d[i]
+        inter_point = rays_o + t * rays_d[i]
         inter_points.append(inter_point.flatten().tolist())
 
     return inter_points
@@ -243,7 +245,7 @@ class SimulationCamera:
             t (np.ndarray): 平移向量。
 
         Returns:
-            tuple: 包含光线起点和方向的列表,分别为rays_o和rays_d。
+            rays_d(list): 相机坐标系下的射线方向。 
         """
         lt = np.array([[0., 0, 1]], dtype=np.float32).reshape(3, 1)
         rt = np.array([[self.img_shape[0]-1, 0, 1.]],
@@ -255,19 +257,34 @@ class SimulationCamera:
 
         # 定义图像的四个角点坐标（左上、右上、右下、左下）
         uvs = [lt, rt, rd, ld]
-        rays_o = []  # 射线起点,其实都一样
         rays_d = []  # 射线方向
         for uv in uvs:
             p_cam = self.camera_K_inv @ uv
             p_world = self.rotation_matrix @ p_cam
-            ray_o = self.translation_vector
             ray_d = p_world / np.linalg.norm(p_world)
-            rays_o.append(ray_o)
-            rays_d.append(ray_d)
-        return rays_o, rays_d
+            rays_d.append(ray_d.tolist())
+        return rays_d
+    
+    def get_fov_angle(self):
+        """
+        计算相机的视场角。
 
-    def get_scope(self, height=0):
-        return compute_xy_coordinate(* self.get_rays_corners(), height)
+        Returns:
+            list[float]: 相机的视场角[angle_h,angle_v]。
+        """
+
+        rays_d = self.get_rays_corners()
+        if not isinstance(rays_d, np.ndarray):
+            rays_d = np.array(rays_d, dtype=np.float32).reshape(4, 3)
+        
+        rad_h = math.acos(np.dot(rays_d[0], rays_d[1]))
+        rad_v = math.acos(np.dot(rays_d[1], rays_d[3]))
+
+        return math.degrees(rad_h),math.degrees(rad_v)
+    
+
+    def get_fov_scope(self, height=0):
+        return compute_xy_coordinate(self.translation_vector.flatten().tolist(), self.get_rays_corners(), height)
 
     def pixel2point(self, pixel):
         """
