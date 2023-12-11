@@ -25,6 +25,9 @@ class Package:
         # for evaluation
         self.uid = None
 
+        # for time slice
+        self.delim_flag = 0
+
         # read & write
         self.global_id: int = None
         self.local_id: int = None
@@ -95,13 +98,22 @@ class TimePriorityQueue:
         stop_idx = None
         if self.is_empty():
             raise IndexError("TimePriorityQueue is empty")
-        for idx in range(self.__len__()-1, -1, -1):
-            if self._queue[idx].time - self._queue[-1].time > time_slice:
+        
+        stop_time = self._queue[-1].time + time_slice  # 默认值为 最小时间+时间间隔
+        for i in reversed(self._queue):
+            if i.delim_flag:
+                stop_time =i.time 
+                break
+
+        for idx in range(len(self._queue) - 2, -1, -1):
+            # 找到分界点,或者超过时间间隔
+            if self._queue[idx].time  > stop_time:
                 stop_idx = idx + 1
                 break
         else:
             stop_idx = 0
 
+        self._queue[stop_idx].delim_flag = 1
         time_slice_list = self._queue[stop_idx:]
         self._queue = self._queue[:stop_idx]
         return time_slice_list
