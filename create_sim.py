@@ -27,6 +27,10 @@ obj_json = {
     "obj_img": None
 }
 
+unity_obj = {
+    "id": None,
+    "point": []
+}
 
 if __name__ == "__main__":
 
@@ -41,8 +45,8 @@ if __name__ == "__main__":
                         help='Whether to generate unity data,default: yes')
     parser.add_argument('--nogen_sim',  action='store_true',
                         help='Whether to generate sim data, default: yes')
-    parser.add_argument('--unity_data', default='simulated_data/unit_data.json',
-                        type=str, help='Path of unit_data')
+    parser.add_argument('--unity_data', default='simulated_data/unity_data.json',
+                        type=str, help='Path of unity_data')
     parser.add_argument('--sim_data', default='simulated_data/simulate_data.json',
                         type=str, help='Path of sim_data')
     args = parser.parse_args()
@@ -103,6 +107,13 @@ if __name__ == "__main__":
                 sim_obj_data = copy.deepcopy(obj_json)
                 status, data = camera.get_bbox_result(
                     objs[idx].next_point(), objs[idx].get_bbox_size())
+
+                if data[1]:
+                    unity_d = copy.deepcopy(unity_obj)
+                    unity_d["id"] = objs[idx].uid
+                    unity_d["point"] = data[1]
+                    unity_data["data"].append(unity_d)
+
                 if status == PointType.ValidPoint:
                     if objs[idx].tracker_id[uav_id] == -1:
                         # 新目标, 赋值tracker_id
@@ -124,10 +135,10 @@ if __name__ == "__main__":
             if not sim_package["obj_cnt"] == 0:
                 sim_data["data"].append(sim_package)
 
-    # if args.nogen_unity:
-    #     with open(args.unity_data, 'w') as outfile:
-    #         json_data = json.dumps(unity_data)
-    #         outfile.write(json_data)
+    if not args.nogen_unity:
+        with open(args.unity_data, 'w') as outfile:
+            json_data = json.dumps(unity_data)
+            outfile.write(json_data)
 
     if not args.nogen_sim:
         with open(args.sim_data, 'w') as outfile:

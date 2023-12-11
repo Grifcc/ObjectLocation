@@ -331,7 +331,7 @@ class SimulationCamera:
         # 根据 xy 找到对应的真实点坐标
         status, result_point = get_real_point(gt_point, self.mesh)
         if status != PointType.ValidPoint:
-            return status, ()
+            return status, (None, None, None)
 
         # 逆向求解,将真实点坐标转换为像平面的二维点
         pixel = self.point2pixel(result_point)
@@ -339,15 +339,15 @@ class SimulationCamera:
         # 判断像平面的二维点是否在图像内
         bbox = self.img.get_bbox(pixel, bbox_size)
         if bbox == PointType.OOC:
-            return PointType.OOC, ()  # 图像外
+            return PointType.OOC, (None, result_point, None)  # 图像外
 
         # 正向求解,将像平面的二维点转换为空间三维点
         status, pred_point = self.pixel2point(pixel)
         if status != PointType.ValidPoint:
-            return status, ()
+            return status, (None, None, None)
 
         # 判断是否被遮挡
         if np.linalg.norm(np.array(pred_point)-np.array(result_point)) > self.threshold:
-            return PointType.Obscured, ()
+            return PointType.Obscured, (None, result_point, None)
         else:
             return PointType.ValidPoint, (bbox, result_point, pred_point)
