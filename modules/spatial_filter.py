@@ -10,6 +10,7 @@ class CircularQueue:
         self.size = 0
         self.front = 0
         self.rear = -1
+        self.max_global_id= -1
 
     def is_empty(self):
         return self.size == 0
@@ -40,15 +41,23 @@ class CircularQueue:
         print("Current Queue: ", end="")
         index = self.front
         for _ in range(self.size):
-            print(self.queue[index], end=" ")
+            print()
+            print(index, self.queue[index])
             index = (index + 1) % self.capacity
         print()
 
+    # 获得最新数据
     def get_last_element(self):
         if self.is_empty():
             return None
         return self.queue[self.rear]
-
+    # 获得第i新的数据
+    def get_last_element_i(self, i):
+        if self.is_empty() or i >= self.size or i < 0:
+            return None
+        index = (self.rear - i) % self.capacity
+        return self.queue[index]
+    
 
 class SpatialFilter(Filter):
     def __init__(self, time_slice,distance_threshold=None, max_map=None, max_queue_length=None):
@@ -58,7 +67,7 @@ class SpatialFilter(Filter):
     
     def create_history(self, max_number):
         global_history = CircularQueue(max_number)
-        global_history.enqueue([{}]) # TODO 这个代码history为null时报错，所以先enqueue
+        global_history.enqueue({}) # TODO 这个代码history为null时报错，所以先enqueue
         return global_history
 
 
@@ -168,42 +177,42 @@ class SpatialFilter(Filter):
     输出:grouped_detections, global_queue(更新global后的detection, 更新后global溯源表)
     '''
     def find_global(self, grouped_detections, global_queue):
-        last_track_list = global_queue.get_last_element() # eg.last_track_list[i]为 global_id_index - {uav1:track2, uav3:track2}
-        new_list = [{}]*len(last_track_list) 
-        global_id = len(last_track_list) 
+        my_dict = {}
+        # 遍历新检测数据
         for local_id, group in grouped_detections.items():
-            # print(f"Local ID: {local_id}")
-            # 找到当下loacl_id之前追踪到的点
-            found = False    
-            for detect in group:
-                detect_track_id = detect.tracker_id
-                detect_uav_id = detect.uav_id
-                for i in range(len(last_track_list)):
-                    if detect_uav_id in last_track_list[i] and detect_track_id == last_track_list[i][detect_uav_id]:
+            found = False 
+            # 遍历溯源表
+            for i in range(0, global_queue.size):
+                last_track = global_queue.get_last_element_i(i)
+                
+                for detect in group: # 遍历同一个local_id
+                    key = f"{detect.uav_id}_{detect.tracker_id}"
+                    if key in last_track: # 找到了
                         found = True
-                        my_dict = {}
-                        for detect in group:
-                            detect.global_id = i # 更新global_id
+                        for new_detect in group:
+                            new_detect.global_id = last_track[key] # 更新global_id
                             # 更新global溯源表
-                            my_dict[detect.uav_id] = detect.tracker_id 
-                        new_list[i] = my_dict
-                        break
-                if found:
+                            new_key = f"{new_detect.uav_id}_{new_detect.tracker_id}"
+                            my_dict[new_key] = last_track[key]
+                        break # 结束detect in group    
+                if found: # 结束溯源表循环
                     break
+            
+            # 如果遍历完所有溯源表没找到
             if(not found):
-                my_dict = {}
+                global_queue.max_global_id = global_queue.max_global_id + 1
                 for detect in group:
-                    detect.global_id = global_id # 更新global_id
+                    detect.global_id = global_queue.max_global_id # 更新global_id
                     # 更新global溯源表
-                    my_dict[detect.uav_id] = detect.tracker_id 
-                new_list.append(my_dict)
-                global_id = global_id+1
-        
-        global_queue.enqueue(new_list) # 更新溯源表
+                    new_key = f"{detect.uav_id}_{detect.tracker_id}"
+                    my_dict[new_key] = detect.global_id
+
+        global_queue.enqueue(my_dict)
         detections_list = []
         for group in grouped_detections.values():
             detections_list.extend(group)
         return detections_list, global_queue
+
     
     def process(self, packages: list[Package]):
         # 拆解list，便于后续操作
@@ -215,10 +224,6 @@ class SpatialFilter(Filter):
             class0_list, local_id = self.Spatial_filter1(self.distance_threshold, class0_list, local_id=local_id)
         if len(class1_list) != 0:
             class1_list, local_id = self.Spatial_filter1(self.distance_threshold, class1_list, local_id=local_id)
-        # for i in range(len(class0_list)):
-        #     for j in range(len(class0_list[i])):
-        #         package = class0_list[i][j]
-        #         print(package.uav_id, package.tracker_id, package.local_id)
         # 空间滤波2:根据local_id更新平均距离，同local_id会按照track_id排序
         group_list = self.Spatial_filter2(class0_list, class1_list)
         # global_id溯源
