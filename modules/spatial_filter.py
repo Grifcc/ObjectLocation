@@ -108,9 +108,11 @@ class SpatialFilter(Filter):
                 for i in range(min(len(list_i),len(list_j))):
                     min_index = np.argmin(matrix_distance)
                     min_index_2d = np.unravel_index(min_index, matrix_distance.shape) #(a,b)说明list_i的第a个与list_j的第b个距离最近
+                    if(matrix_distance[min_index_2d]) > 1000.:
+                        break
                     list_j[min_index_2d[1]].local_id = list_i[min_index_2d[0]].local_id
-                    matrix_distance[i][:] = float('inf')
-                    matrix_distance[:][j] = float('inf')
+                    matrix_distance[min_index_2d[0],:] = float('inf')
+                    matrix_distance[:,min_index_2d[1]] = float('inf')
                 
         # 更新最后一个uav列表的local_id                   
         for child_list_i in detections_list[-1]:
