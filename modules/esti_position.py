@@ -113,7 +113,7 @@ class EstiPosition(Location):
         # 射线交面片：
         result = mesh_raycast.raycast(ray_origins, ray_directions, mesh=self.mesh)
         if len(result) == 0: # TODO 可优化
-            result_point = np.array([0.,0,0]).reshape(3,1)
+            result_point = None # TODO 可优化
         else:
             first_result = min(result, key=lambda x: x['distance'])
             result_point= first_result['point']
