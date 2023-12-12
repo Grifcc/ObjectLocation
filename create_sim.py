@@ -90,7 +90,7 @@ if __name__ == "__main__":
     objs = []
     for obj in obj_data["objects"]:
         objs.append(SimulationObject(
-            obj, len(cameras), max_age=2, uid=obj["uid"]))
+            obj, len(cameras), max_age=50, uid=obj["uid"]))
 
 
     start_timestamp = 1701482850000  # unix 时间戳 2023-12-02 10:07:30.000 ms 起始时间

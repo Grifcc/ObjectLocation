@@ -11,8 +11,8 @@ if __name__ == "__main__":
     modules.append(JsonSource("simulated_data/simulate_data.json"))
     modules.append(TimeFilter(100))
     modules.append(EstiPosition("data/JiulongLake.obj"))
-    modules.append(SpatialFilter(100, distance_threshold=2.,max_map=500))
-    modules.append(PrintSink("http://192.168.31.31:8888/jk-ivas/non/controller/postTarPos.do"))
+    modules.append(SpatialFilter(100, distance_threshold=2.,max_map=10))
+    modules.append(PrintSink())
 
     pipe= Pipeline(modules)
     pipe.run()

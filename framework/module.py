@@ -12,6 +12,7 @@ class Package:
         # read only
         self.time = time
         self.uav_id: int = None
+        self.camera_id: int | str = None
         self.camera_pose: list[float] = []  # [yaw,pitch,roll,x,y,z]
         self.camera_K: list[float] = []  # [fx,fy,cx,cy]
         self.camera_distortion: list[float] = []  # [k1,k2,p1,p2]
@@ -98,16 +99,16 @@ class TimePriorityQueue:
         stop_idx = None
         if self.is_empty():
             raise IndexError("TimePriorityQueue is empty")
-        
+
         stop_time = self._queue[-1].time + time_slice  # 默认值为 最小时间+时间间隔
         for i in reversed(self._queue):
             if i.delim_flag:
-                stop_time =i.time 
+                stop_time = i.time
                 break
 
         for idx in range(len(self._queue) - 2, -1, -1):
             # 找到分界点,或者超过时间间隔
-            if self._queue[idx].time  > stop_time:
+            if self._queue[idx].time > stop_time:
                 stop_idx = idx + 1
                 break
         else:
