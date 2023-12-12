@@ -5,17 +5,13 @@ import time
 
 
 class PrintSink(Sink):
-    def __init__(self, url, max_retries=5):
-        super().__init__("http_sink")
-        self.url = url
-        self.max_retries = max_retries
+    def __init__(self):
+        super().__init__("print_sink")
 
     def process(self, data: Package):
-        retry_count = 0
         send_data = {}
         send_data["time"] = data.time
         send_data["obj_cnt"] = 1
-        send_data["objs"] = [{"id": data.global_id,"tr_id": data.tracker_id, "cls": data.class_id,
-                              "gis": data.location, "obj_img": data.obj_img, "local_id": data.local_id}]
-
+        send_data["objs"] = [{"id": data.global_id, "uid": data.uid, "tr_id": data.tracker_id,  "local_id": data.local_id, "cls": data.class_id,
+                              "gis": data.location, "obj_img": data.obj_img}]
         print(send_data)

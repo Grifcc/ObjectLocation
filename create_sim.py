@@ -76,7 +76,7 @@ if __name__ == "__main__":
     objs = []
     for obj in obj_data["objects"]:
         objs.append(SimulationObject(
-            obj, len(cameras), max_age=2, uid=obj["uid"]))
+            obj, len(cameras), max_age=50, uid=obj["uid"]))
 
     unity_data = {
         "data": []
