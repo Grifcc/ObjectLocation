@@ -94,12 +94,13 @@ def compute_xy_coordinate(rays_o: list, rays_d: list, height=0):
         list: 包含光线与XY平面的交点坐标的列表。
     """
     inter_points = []
+    if not isinstance(rays_d, np.ndarray):
+        rays_d = np.array(rays_d, dtype=np.float32).reshape(4, 3)
     if not isinstance(rays_o, np.ndarray):
-        rays_d = np.array(rays_d, dtype=np.float32)
+        rays_o = np.array(rays_o, dtype=np.float32).reshape(1, 3)
     for i in range(4):
         # 计算射线与XY平面的交点的t值 o+td = 0
-        t = (height - rays_o[2]) / rays_d[i][2]
-
+        t = (height - rays_o[0][2]) / rays_d[i][2]
         # 计算交点坐标
         inter_point = rays_o + t * rays_d[i]
         inter_points.append(inter_point.flatten().tolist())
@@ -264,7 +265,7 @@ class SimulationCamera:
             ray_d = p_world / np.linalg.norm(p_world)
             rays_d.append(ray_d.tolist())
         return rays_d
-    
+
     def get_fov_angle(self):
         """
         计算相机的视场角。
@@ -276,12 +277,11 @@ class SimulationCamera:
         rays_d = self.get_rays_corners()
         if not isinstance(rays_d, np.ndarray):
             rays_d = np.array(rays_d, dtype=np.float32).reshape(4, 3)
-        
+
         rad_h = math.acos(np.dot(rays_d[0], rays_d[1]))
         rad_v = math.acos(np.dot(rays_d[1], rays_d[3]))
 
-        return math.degrees(rad_h),math.degrees(rad_v)
-    
+        return math.degrees(rad_h), math.degrees(rad_v)
 
     def get_fov_scope(self, height=0):
         return compute_xy_coordinate(self.translation_vector.flatten().tolist(), self.get_rays_corners(), height)
