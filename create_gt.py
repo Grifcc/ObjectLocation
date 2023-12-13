@@ -7,11 +7,11 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(add_help=True)
     parser.add_argument(
         '--mesh_path', default='data/JiulongLake.obj', type=str, help='Path of map mesh')
-    parser.add_argument('--duration', default=30, type=int,
+    parser.add_argument('--duration', default=60, type=int,
                         help='Required amount of simulated data,unit: second')
-    parser.add_argument('--objs_cfg', default="data/points.json", type=str,
+    parser.add_argument('--objs_cfg', default="data/points_2.json", type=str,
                         help='Configuration file for target start and end points')
-    parser.add_argument('--cameras_cfg', default="data/cameras.json", type=str,
+    parser.add_argument('--cameras_cfg', default="data/cameras_2.json", type=str,
                         help='Configuration file for camera parameters')
     parser.add_argument('--obj_attr_output', default="simulated_data/objects.json", type=str,
                         help='The name of the object attribute output file, default is "3d_rotation.mp4"')
