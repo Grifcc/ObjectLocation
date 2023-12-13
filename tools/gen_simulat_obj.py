@@ -23,8 +23,10 @@ def get_deg_distance(p1, p2):
     # 计算向量长度
     vector_len = np.sqrt(np.sum(np.square(vector)))
     # 计算向量与x轴的夹角
-    rad = np.arccos(vector[0][0] / vector_len)
+    rad = np.arccos(np.dot(vector/vector_len , np.array([1, 0])))
     # 转换为角度
+    if vector[0][1] < 0:
+        rad = -rad
     angle = np.rad2deg(rad)
     return float(angle),float(vector_len) 
 
