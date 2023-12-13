@@ -1,5 +1,5 @@
 import copy
-import math
+import numpy as np
 
 objects_attribute = {
     "cls_id": -1,
@@ -11,19 +11,23 @@ objects_attribute = {
 }
 
 
-def get_angle(p1, p2):
-    if p2[0]-p1[0] != 0:
-        slope = (p2[1]-p1[1])/(p2[0]-p1[0])
-    else:
-        if p2[1]-p1[1] > 0:
-            return 90
-        else:
-            return -90
-    return math.degrees(math.atan(slope))
+def get_deg_distance(p1, p2):
 
+    if not isinstance(p1, np.ndarray):
+        start_point = np.array(p1, dtype=np.float32).reshape(1, 2)
+    if not isinstance(p2, np.ndarray):
+        end_point = np.array(p2, dtype=np.float32).reshape(1, 2)
 
-def get_distance(p1, p2):
-    return math.sqrt((p2[1]-p1[1])**2 + (p2[0]-p1[0])**2)
+    # 计算向量
+    vector = end_point - start_point
+    # 计算向量长度
+    vector_len = np.sqrt(np.sum(np.square(vector)))
+    # 计算向量与x轴的夹角
+    rad = np.arccos(vector[0][0] / vector_len)
+    # 转换为角度
+    angle = np.rad2deg(rad)
+    return float(angle),float(vector_len) 
+
 
 
 def get_attr(start_point: list[int, int], end_point: list[int, int], duration: float) -> dict:
@@ -47,10 +51,9 @@ def get_attr(start_point: list[int, int], end_point: list[int, int], duration: f
     attr = copy.deepcopy(objects_attribute)
     attr["start_point"] = start_point
     attr["end_point"] = end_point
-    attr["angle"] = get_angle(start_point, end_point)
-    attr["distance"] = get_distance(start_point, end_point)
+    attr["angle"],attr["distance"] = get_deg_distance(start_point, end_point)
     attr["speed"] = attr["distance"] / duration
-    if attr["speed"] > 0.3:
+    if attr["speed"] > 0.2:
         attr["cls_id"] = 1  # fast 车
         attr["bbox"] = [40, 20]
     else:
