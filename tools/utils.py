@@ -51,6 +51,30 @@ def undistort_pixel_coords(p_cam, distortion_coeffs):
     return p_cam_distorted
 
 
+def get_ray(pixel: Union[list, tuple], K_inv, distortion_coeffs, rotation) -> np.ndarray:
+    """
+    获取从相机像素点出发的射线方向。
+
+    Args:
+        pixel: 相机像素点坐标，[x,y] 可以是列表或元组类型。
+        K_inv: 相机内参的逆矩阵，形状为 (3, 3) 的浮点型数组。
+        distortion_coeffs: 畸变系数，形状为 (N,) 的浮点型数组，N 是畸变系数的数量。
+        rotation: 相机旋转矩阵，形状为 (3, 3) 的浮点型数组。
+
+    Returns:
+        ray: 射线方向向量，形状为 (3,) 的浮点型数组，表示从相机像素点出发的单位方向向量。
+    """
+    if not isinstance(pixel, np.ndarray):
+        pixel = np.array([pixel[0], pixel[1], 1],
+                         dtype=np.float32).reshape(3, 1)
+
+    p_cam = K_inv @ pixel
+    p_cam = undistort_pixel_coords(p_cam, distortion_coeffs)  # 畸变校正
+    p_world = rotation @ p_cam
+    ray = p_world / np.linalg.norm(p_world)
+    return ray.flatten()
+
+
 def compute_xy_coordinate(rays_o: list, rays_d: list, height=0):
     """
     计算光线与XY平面的交点坐标。
@@ -206,29 +230,6 @@ class SimulationCamera:
     def get_max_id(self):
         return self.max_id
 
-    def get_ray(self, pixel):
-        """
-        获取从相机像素点出发的射线方向。
-
-        Args:
-            pixel (np.ndarray or tuple): 相机像素点坐标。
-                如果是 np.ndarray 类型，则应该是形状为 (3, 1) 的浮点型数组。
-                如果是 tuple 类型，则应该是包含两个元素的坐标值，例如 (x, y)。
-
-        Returns:
-            ray (np.ndarray): 射线方向向量。
-                形状为 (3,) 的浮点型数组，表示从相机像素点出发的单位方向向量。
-        """
-        if not isinstance(pixel, np.ndarray):
-            pixel = np.array([pixel[0], pixel[1], 1],
-                             dtype=np.float32).reshape(3, 1)
-
-        p_cam = self.camera_K_inv @ pixel
-        p_cam = undistort_pixel_coords(p_cam, self.distortion_coeffs)  # 畸变校正
-        p_world = self.rotation @ p_cam
-        ray = p_world / np.linalg.norm(p_world)
-        return ray.flatten()
-
     def get_corner_rays(self):
         """
         获取图像四个角点处的射线方向。
@@ -246,7 +247,9 @@ class SimulationCamera:
 
         rays_d = []  # 射线方向
         for uv in uvs:
-            rays_d.append(self.get_ray(uv).tolist())
+            ray_d = get_ray(uv, self.camera_K_inv,
+                            self.distortion_coeffs, self.rotation)
+            rays_d.append(ray_d.tolist())
         return rays_d
 
     def get_fov_angle(self):
@@ -282,10 +285,12 @@ class SimulationCamera:
 
         """
         assert not self.mesh is None, "mesh is None"
-        ray = - self.get_ray(pixel)  # 相机坐标系下的射线方向,应该在负向
+        # 相机坐标系下的射线方向,应该在负向
+        ray_d = -get_ray(pixel, self.camera_K_inv,
+                         self.distortion_coeffs, self.rotation)
         ray_origins = self.translation_vector
         result = mesh_raycast.raycast(
-            ray_origins.flatten(), ray, self.mesh)
+            ray_origins.flatten(), ray_d, self.mesh)
 
         if len(result) == 0:  # TODO 可优化
             return PointType.NonePoint, ()  # 地图空洞,无交点
