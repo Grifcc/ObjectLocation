@@ -6,18 +6,35 @@ import copy
 from tqdm import tqdm
 
 data_json = {
-    "timestamp": None,
-    "uav_id": None,
-    "camera_id": None,
-    "camera_params": {
-        "pose": None,  # [yaw,pitch,roll,x,y,z]
-        "K": None,        # [fx,fy,cx,cy]
-        "distortion": None,  # [k1,k2,p1,p2]
+    "Time": None,
+    "Fly_id": None,
+    "Camera_id": None,
+    "Camera": {
     },
     "obj_cnt": None,
     "objs": [],
 }
-
+camera_json = {
+    "Yaw": 0.0,
+    "Pitch": 0.0,
+    "Roll": 0.0,
+    "longitude": 0,
+    "latitude": 0,
+    "height": 0,
+    "intrinsic_params": {
+        "focal_length": {
+            "value": 0, "unit": "mm"
+        },
+        "zoom": {
+            "is_zoom_supported": False,
+            "img_size": [],
+            "sensor_size": []
+        },
+        "distortion_correction_params": {
+            "distortion": [0, 0, 0, 0, 0]
+        }
+    }
+}
 obj_json = {
     "uid": None,  # for evaluation
     "tracker_id": None,
@@ -37,7 +54,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(add_help=True)
     parser.add_argument(
         '--mesh_path', default='data/JiulongLake.obj', type=str, help='Path of map mesh')
-    parser.add_argument('--cameras_cfg', default="data/cameras.json", type=str,
+    parser.add_argument('--cameras_cfg', default="data/cameras_2.json", type=str,
                         help='Configuration file for camera parameters')
     parser.add_argument('--objects', default="simulated_data/objects.json", type=str,
                         help='Real points used for generating simulated data.')
@@ -57,7 +74,7 @@ if __name__ == "__main__":
     }
 
     sim_data = {"data": []}
-    
+
     # 根据配置文件解析相机参数
     with open(args.cameras_cfg, "r") as f:
         camera_param = json.load(f)
@@ -66,15 +83,16 @@ if __name__ == "__main__":
     distortion = camera_param["D"]  # 畸变参数
     frame_rate = camera_param["fps"]  # 帧率
     shape = camera_param["shape"]  # 图像大小
+    euler_type = camera_param["euler_type"]  # 欧拉角类型
 
     cameras = []
     for ext_param in camera_param["ext_param"]:
         pose = [ext_param["yaw"], ext_param["pitch"], ext_param["roll"],
                 ext_param["x"], ext_param["y"], ext_param["z"]]
         cameras.append(SimulationCamera(
-            pose, K, distortion, shape, mesh_path=args.mesh_path))
-        
-        # unity data
+            pose, K, distortion, shape, mesh_path=args.mesh_path, euler=euler_type))
+
+        # unity data  default: szxy
         u_camera = {
             "pose": ext_param,
         }
@@ -90,24 +108,32 @@ if __name__ == "__main__":
     objs = []
     for obj in obj_data["objects"]:
         objs.append(SimulationObject(
-            obj, len(cameras), max_age=50, uid=obj["uid"]))
-
+            obj, len(cameras), max_age=20, uid=obj["uid"]))
 
     start_timestamp = 1701482850000  # unix 时间戳 2023-12-02 10:07:30.000 ms 起始时间
 
     for i in tqdm(range(duration*frame_rate)):
         for uav_id, camera in enumerate(cameras):
             sim_package = copy.deepcopy(data_json)
-            sim_package["timestamp"] = start_timestamp + \
-                i*40 + random.randint(-10, 10)
-            sim_package["uav_id"] = uav_id
-            sim_package["camera_id"] = uav_id
-            sim_package["camera_params"]["pose"] = camera.pose
-            sim_package["camera_params"]["K"] = K
-            sim_package["camera_params"]["distortion"] = distortion
+            sim_package["Time"] = start_timestamp + \
+                i*(1000/frame_rate) + random.randint(-10, 10)
+            sim_package["Fly_id"] = uav_id
+            sim_package["Camera_id"] = uav_id
+            pose = camera.pose
+            c_json = copy.deepcopy(camera_json)
+            c_json["Yaw"] = pose[0]
+            c_json["Pitch"] = pose[1]
+            c_json["Roll"] = pose[2]
+            c_json["longitude"] = pose[3]
+            c_json["latitude"] = pose[4]
+            c_json["height"] = pose[5]
+            c_json["intrinsic_params"]["focal_length"]["value"] = camera_param["focal_length"]
+            c_json["intrinsic_params"]["zoom"]["img_size"] = camera_param["shape"]
+            c_json["intrinsic_params"]["zoom"]["sensor_size"] = camera_param["sensor_size"]
+            c_json["intrinsic_params"]["distortion_correction_params"]["distortion"] = camera_param["D"]
+            sim_package["Camera"] = c_json
 
             for idx in range(len(objs)):
-
                 if objs[idx].age[uav_id] > objs[idx].max_age:
                     # 超过最大age，表示跟丢，重置tracker_id,重置age
                     objs[idx].tracker_id[uav_id] = -1
