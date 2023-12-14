@@ -20,18 +20,15 @@ def plot_camera_fov(ax, t1, points, color):
 
     """
     # 绘制四个点
+    scope = np.array([*points, points[0]], dtype=np.float32).reshape(5, 3)
     ax.scatter(t1[0], t1[1], t1[2], c=color, marker='o')
     # 依次连接四个点
-    for i in range(len(points)):
-        ax.plot([t1[0], points[i][0]], [t1[1], points[i][1]], [
-                t1[2], points[i][2]], c=color, linestyle='--')
-    # 依次连接四个点
-    for i in range(len(points) - 1):
-        ax.plot([points[i][0], points[i + 1][0]], [points[i][1],
-                points[i + 1][1]], [points[i][2], points[i + 1][2]], c=color)
-    ax.plot([points[3][0], points[0][0]], [points[3][1], points[0][1]],
-            [points[3][2], points[0][2]], c=color)
+    for i in range(4):
+        ax.plot([t1[0], scope[i][0]], [t1[1], scope[i][1]], [
+                t1[2], scope[i][2]], c=color, linestyle='--')
 
+    # 依次连接四个点
+    ax.plot(scope[:, 0], scope[:, 1], scope[:, 2], c=color)
 
 def plot_line(ax, line, color):
     line = np.array(line, dtype=np.float32)
@@ -88,13 +85,14 @@ def gen_real_point(args):
     distortion = camera_param["D"]  # 畸变参数
     frame_rate = camera_param["fps"]  # 帧率
     shape = camera_param["shape"]  # 图像大小
+    euler_type = camera_param["euler_type"]  # 欧拉角类型
 
     cameras = []
     for ext_param in camera_param["ext_param"]:
         pose = [ext_param["yaw"], ext_param["pitch"], ext_param["roll"],
                 ext_param["x"], ext_param["y"], ext_param["z"]]
         cameras.append(SimulationCamera(
-            pose, K, distortion, shape))
+            pose, K, distortion, shape, euler=euler_type))
 
     # 根据配置文件解析目标参数
     with open(args.objs_cfg, "r") as f:
@@ -108,7 +106,6 @@ def gen_real_point(args):
         objs.append(SimulationObject(attr, uid=idx))
         attr["uid"] = idx
         objs_attr["objects"].append(attr)
-        
 
     with open(args.obj_attr_output, "w") as f:
         objs_attr["duration"] = args.duration
@@ -136,14 +133,15 @@ def gen_real_point(args):
     lines = []
     for idx, obj in enumerate(objs):
         line = []
-        for frame in range(24 * 20):
+        for frame in range(frame_rate * args.duration):
             now_ponit = obj.next_point()
             status, real_point = get_real_point(now_ponit, mesh)
             if status != PointType.ValidPoint:
                 continue
             line.append(real_point)
+        distance = np.linalg.norm(np.array(line[0]) - np.array(line[-1]))
         print(
-            f"目标{obj.uid}移动了{len(line)}米,速度为{obj.speed:.2f}m/frame,生成了{len(line)}个点数据")
+            f"目标{obj.uid}在水平方向移动了{distance:.2f}米,速度为{obj.speed:.2f}m/frame,生成了{len(line)}个点数据")
         lines.append(line)
         plot_line(ax, line, color=obj_colors[idx])
 

@@ -4,6 +4,7 @@ import mesh_raycast
 import numpy as np
 from enum import Enum
 import math
+import transforms3d as tfs
 
 
 class PointType(Enum):
@@ -30,44 +31,13 @@ def set_distortion_coeffs(distortion_param):
     return np.array([k1, k2, k3, p1, p2])
 
 
-def set_camera_pose(camera_pose):  # (yaw,pitch,row,x,y,z)
-
-    roll = camera_pose[2]   # roll
-    pitch = camera_pose[1]   # pitch
-    yaw = camera_pose[0]   # yaw
-
-    # 角度转弧度
-    roll = np.radians(roll)  # 绕X轴旋转
-    pitch = np.radians(pitch)  # 绕Y轴旋转
-    yaw = np.radians(yaw)  # 绕Z轴旋转
-
+def set_camera_pose(camera_pose, order='szxy'):  # (yaw,pitch,row,x,y,z)
     t = np.array(camera_pose[3:], dtype=float)
-    # 构建绕X、Y、Z轴旋转的矩阵
-    R_x = np.array([
-        [1, 0, 0],
-        [0, np.cos(roll), -np.sin(roll)],
-        [0, np.sin(roll), np.cos(roll)]])
-
-    R_y = np.array([
-        [np.cos(pitch), 0, np.sin(pitch)],
-        [0, 1, 0],
-        [-np.sin(pitch), 0, np.cos(pitch)]])
-
-    R_z = np.array([
-        [np.cos(yaw), -np.sin(yaw), 0],
-        [np.sin(yaw), np.cos(yaw), 0],
-        [0, 0, 1]])
-
-    # 得到总的旋转矩阵
-    R = R_z @ R_y @ R_x
+    R = tfs.euler.euler2mat(*np.radians(camera_pose[:3]).tolist(), order)
     return R, t.reshape(3, 1), np.linalg.inv(R)
 
 
-def undistort_pixel_coords(pixel_coords, camera_K_inv, distortion_coeffs):
-    # 像素坐标转为齐次坐标
-    pixel = np.array([pixel_coords[0], pixel_coords[1], 1.]).reshape(3, 1)
-    # 像素坐标转换到相机坐标系下
-    p_cam = np.dot(camera_K_inv, pixel)
+def undistort_pixel_coords(p_cam, distortion_coeffs):
     # 畸变校正的计算过程
     x = p_cam[0][0]
     y = p_cam[1][0]
@@ -79,6 +49,30 @@ def undistort_pixel_coords(pixel_coords, camera_K_inv, distortion_coeffs):
     # 校正后的相机坐标
     p_cam_distorted = np.array([x_correction, y_correction, 1.]).reshape(3, 1)
     return p_cam_distorted
+
+
+def get_ray(pixel: Union[list, tuple], K_inv, distortion_coeffs, rotation) -> np.ndarray:
+    """
+    获取从相机像素点出发的射线方向。
+
+    Args:
+        pixel: 相机像素点坐标，[x,y] 可以是列表或元组类型。
+        K_inv: 相机内参的逆矩阵，形状为 (3, 3) 的浮点型数组。
+        distortion_coeffs: 畸变系数，形状为 (N,) 的浮点型数组，N 是畸变系数的数量。
+        rotation: 相机旋转矩阵，形状为 (3, 3) 的浮点型数组。
+
+    Returns:
+        ray: 射线方向向量，形状为 (3,) 的浮点型数组，表示从相机像素点出发的单位方向向量。
+    """
+    if not isinstance(pixel, np.ndarray):
+        pixel = np.array([pixel[0], pixel[1], 1],
+                         dtype=np.float32).reshape(3, 1)
+
+    p_cam = K_inv @ pixel
+    p_cam = undistort_pixel_coords(p_cam, distortion_coeffs)  # 畸变校正
+    p_world = rotation @ p_cam
+    ray = p_world / np.linalg.norm(p_world)
+    return ray.flatten()
 
 
 def compute_xy_coordinate(rays_o: list, rays_d: list, height=0):
@@ -208,13 +202,14 @@ class SimulationObject:
 
 
 class SimulationCamera:
-    def __init__(self, poses: list[float], camera_K: list[float], distortion_coeffs: list[float], img_shape: Union[tuple, list], mesh_path: str = None, threshold: float = 1.5, bbox_type='cxcywh'):
+    def __init__(self, poses: list[float], camera_K: list[float], distortion_coeffs: list[float], img_shape: Union[tuple, list], mesh_path: str = None, threshold: float = 1.5, euler="ZXY", bbox_type='cxcywh'):
 
         self.pose = poses
+        self.euler = euler
         self.camera_K, self.camera_K_inv = set_K(camera_K)
         self.distortion_coeffs = set_distortion_coeffs(distortion_coeffs)
-        self.rotation_matrix, self.translation_vector, self.camera_rotation_inv = set_camera_pose(
-            self.pose)
+        self.rotation, self.translation_vector, self.rotation_inv = set_camera_pose(
+            self.pose, self.euler)
         self.mesh = read_mesh(mesh_path) if mesh_path != None else None
         self.img_shape = img_shape
         self.img = ImageView(self.img_shape, bbox_type)
@@ -230,39 +225,30 @@ class SimulationCamera:
         Returns:
             tuple: 包含相机内参、旋转矩阵、畸变系数和平移向量的元组。
         """
-        return self.camera_K, self.rotation_matrix, self.distortion_coeffs, self.translation_vector.flatten()
+        return self.camera_K, self.rotation, self.distortion_coeffs, self.translation_vector.flatten()
 
     def get_max_id(self):
         return self.max_id
 
-    def get_rays_corners(self):
+    def get_corner_rays(self):
         """
-        计算光线的角点坐标。
-        根据:
-            H (int): 图像的高度。
-            W (int): 图像的宽度。
-            K (np.ndarray): 内参矩阵。
-            R (np.ndarray): 旋转矩阵。
-            t (np.ndarray): 平移向量。
+        获取图像四个角点处的射线方向。
 
         Returns:
-            rays_d(list): 相机坐标系下的射线方向。 
+            rays_d (list): 包含四个角点处射线方向的列表。
+                        每个射线方向是一个三维向量，表示从相机像素点出发的单位方向向量。
         """
-        lt = np.array([[0., 0, 1]], dtype=np.float32).reshape(3, 1)
-        rt = np.array([[self.img_shape[0]-1, 0, 1.]],
-                      dtype=np.float32).reshape(3, 1)
-        rd = np.array([[self.img_shape[0]-1, self.img_shape[1]-1, 1.]],
-                      dtype=np.float32).reshape(3, 1)
-        ld = np.array([[0., self.img_shape[1]-1, 1.]],
-                      dtype=np.float32).reshape(3, 1)
-
         # 定义图像的四个角点坐标（左上、右上、右下、左下）
+        lt = [0, 0]
+        rt = [self.img_shape[0]-1, 0]
+        rd = [self.img_shape[0]-1, self.img_shape[1]-1]
+        ld = [0, self.img_shape[1]-1]
         uvs = [lt, rt, rd, ld]
+
         rays_d = []  # 射线方向
         for uv in uvs:
-            p_cam = self.camera_K_inv @ uv
-            p_world = self.rotation_matrix @ p_cam
-            ray_d = p_world / np.linalg.norm(p_world)
+            ray_d = get_ray(uv, self.camera_K_inv,
+                            self.distortion_coeffs, self.rotation)
             rays_d.append(ray_d.tolist())
         return rays_d
 
@@ -274,7 +260,7 @@ class SimulationCamera:
             list[float]: 相机的视场角[angle_h,angle_v]。
         """
 
-        rays_d = self.get_rays_corners()
+        rays_d = self.get_corner_rays()
         if not isinstance(rays_d, np.ndarray):
             rays_d = np.array(rays_d, dtype=np.float32).reshape(4, 3)
 
@@ -284,7 +270,7 @@ class SimulationCamera:
         return math.degrees(rad_h), math.degrees(rad_v)
 
     def get_fov_scope(self, height=0):
-        return compute_xy_coordinate(self.translation_vector.flatten().tolist(), self.get_rays_corners(), height)
+        return compute_xy_coordinate(self.translation_vector.flatten().tolist(), self.get_corner_rays(), height)
 
     def pixel2point(self, pixel):
         """
@@ -299,13 +285,13 @@ class SimulationCamera:
 
         """
         assert not self.mesh is None, "mesh is None"
-        p_c1 = undistort_pixel_coords(
-            pixel, self.camera_K_inv, self.distortion_coeffs)
-        pc_d = p_c1 / np.linalg.norm(p_c1)
-        pw_d = np.dot(self.rotation_matrix, pc_d)
+        # 相机坐标系下的射线方向,应该在负向
+        ray_d = -get_ray(pixel, self.camera_K_inv,
+                         self.distortion_coeffs, self.rotation)
         ray_origins = self.translation_vector
-        ray_directions = pw_d.flatten()
-        result = mesh_raycast.raycast(ray_origins, ray_directions, self.mesh)
+        result = mesh_raycast.raycast(
+            ray_origins.flatten(), ray_d, self.mesh)
+
         if len(result) == 0:  # TODO 可优化
             return PointType.NonePoint, ()  # 地图空洞,无交点
         result_point = min(result, key=lambda x: x['distance'])[
@@ -324,8 +310,8 @@ class SimulationCamera:
 
         """
         point = np.array(point).reshape(3, 1)
-        p_c1 = self.camera_rotation_inv@(point-self.translation_vector)
-        p_cd = p_c1/p_c1[2]
+        p_cam = self.rotation_inv@(point-self.translation_vector)
+        p_cd = p_cam/p_cam[2]
         pixel = self.camera_K@p_cd
         return [pixel[0][0], pixel[1][0]]
 

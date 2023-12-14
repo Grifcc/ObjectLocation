@@ -9,9 +9,9 @@ from framework.pipeline import Pipeline
 if __name__ == "__main__":
     modules=[]
     modules.append(JsonSource("simulated_data/simulate_data.json"))
-    modules.append(TimeFilter(100))
+    modules.append(TimeFilter(1000))
     modules.append(EstiPosition("data/JiulongLake.obj"))
-    modules.append(SpatialFilter(100, distance_threshold=2.,max_map=10))
+    modules.append(SpatialFilter(1000, distance_threshold=10.,max_map=10))
     modules.append(PrintSink())
 
     pipe= Pipeline(modules)
