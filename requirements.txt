@@ -1,6 +1,6 @@
 # This file is generated automatically by `make requirements.txt`.
 # Do not edit manually.
-# python==3.10
+python_version >= "3.10"
 matplotlib==3.8.0
 numpy==1.26.2
 opencv_python==4.8.1.78
