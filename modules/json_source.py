@@ -14,24 +14,44 @@ class JsonSource(Source):
             json_data = json.load(f)
         return json_data["data"]
 
-    def process(self,packages: list[Package]):
+    def parse_c_pose(self, c_pose: dict):
+        pose = []
+        pose.append(c_pose["Yaw"])
+        pose.append(c_pose["Pitch"])
+        pose.append(c_pose["Roll"])
+        pose.append(c_pose["longitude"])
+        pose.append(c_pose["latitude"])
+        pose.append(c_pose["height"])
+        return pose
+
+    def parse_K_D(self, params: dict):
+        focal_len = params["focal_length"]["value"]
+        img_w, img_h = params["zoom"]["img_size"]
+        sensor_w, sensor_h = params["zoom"]["sensor_size"]
+        fx = focal_len * img_w / sensor_w
+        fy = focal_len * img_h / sensor_h
+        cx = img_w / 2
+        cy = img_h / 2
+        return [fx, fy, cx, cy], params["distortion_correction_params"]["distortion"]
+
+    def process(self, packages: list[Package]):
         if len(self.data) == 0:
             return False
         objs = self.data.pop(0)
         bbox = Package()
-        
+
         for obj in objs["objs"]:
-            bbox.time = objs["timestamp"]
-            bbox.uav_id = objs["uav_id"]
-            bbox.camera_id = objs["camera_id"]
-            bbox.camera_pose = objs["camera_params"]["pose"]
-            bbox.camera_K = objs["camera_params"]["K"]
-            bbox.camera_distortion =objs["camera_params"]["distortion"]
+            bbox.time = objs["Time"]
+            bbox.uav_id = objs["Fly_id"]
+            bbox.camera_id = objs["Camera_id"]
+            bbox.camera_pose = self.parse_c_pose(objs["Camera"])
+            bbox.camera_K, bbox.camera_distortion = self.parse_K_D(
+                objs["Camera"]["intrinsic_params"])
             bbox.Bbox = obj["bbox"]
-            bbox.uid=obj["uid"] # for evaluation
+            bbox.uid = obj["uid"]  # for evaluation
             bbox.class_id = obj["cls_id"]
             bbox.tracker_id = obj["tracker_id"]
             bbox.uav_pos = obj["loc"]
             packages.append(bbox.copy())
-            
+
         return True
