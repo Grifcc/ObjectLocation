@@ -73,26 +73,23 @@ class SpatialFilter(Filter):
         global_history.enqueue({})  # TODO 这个代码history为null时报错，所以先enqueue
         return global_history
 
-    # 按照class_id为两个列表，每个列表再按照uav_id分行
-
+    # 按照class_id划为列表，每个列表再按照uav_id分行
     def classify_classid_uav(self, packages: list[Package]):
-        class0_list = [
-            package for package in packages if package.class_id == 0]
-        class1_list = [
-            package for package in packages if package.class_id == 1]
-
+        # 按照class_id拆分列表
         from collections import defaultdict
-        group1 = defaultdict(list)
-        for package in class0_list:
-            group1[package.uav_id].append(package)
-        class0_list = list(group1.values())
+        group_cls_id = defaultdict(list)
+        for package in packages:
+            group_cls_id[package.class_id].append(package)
+        class_list = list(group_cls_id.values())
 
-        group2 = defaultdict(list)
-        for package in class1_list:
-            group2[package.uav_id].append(package)
-        class1_list = list(group2.values())
+        # 每个类别对应的列表用uav_id拆分
+        for i in range(len(class_list)):
+            group_uav_id = defaultdict(list)
+            for package in class_list[i]:
+                group_uav_id[package.uav_id].append(package)
+            class_list[i] = list(group_uav_id.values())
 
-        return class0_list, class1_list
+        return class_list
 
     # 空间滤波1:赋值local_id(将不同相机间距离相近的点视为同一空间点，使用相同local_id)
     '''
@@ -156,11 +153,12 @@ class SpatialFilter(Filter):
     输出:更新距离后的detections_list
     '''
 
-    def Spatial_filter2(self, detections_list1, detections_list2):
+    def Spatial_filter2(self, class_list):
         from collections import defaultdict
         # 拉成一维
-        detections_list = [item for sublist in detections_list1 for item in sublist] + [
-            item for sublist in detections_list2 for item in sublist]
+        detections_list = []
+        for i in range(len(class_list)):
+            detections_list = detections_list + [item for sublist in class_list[i] for item in sublist]
         # 这里与普通的字典不同，这里与原数据引用的是同一块，会同时改变
         grouped_detections = defaultdict(list)
         # 使用 defaultdict 初始化一个字典，键为 local_id，值为包含相同 local_id 的元素的列表
@@ -230,18 +228,17 @@ class SpatialFilter(Filter):
 
     def process(self, packages: list[Package]):
         # 拆解list，便于后续操作
-        class0_list, class1_list = self.classify_classid_uav(packages)
-
+        class_list = self.classify_classid_uav(packages)
         # 赋值local_id
         local_id = 0
-        if len(class0_list) != 0:
-            class0_list, local_id = self.Spatial_filter1(
-                self.distance_threshold, class0_list, local_id=local_id)
-        if len(class1_list) != 0:
-            class1_list, local_id = self.Spatial_filter1(
-                self.distance_threshold, class1_list, local_id=local_id)
+        for i in range(len(class_list)):
+            if len(class_list[i]) != 0:
+                class_list[i], local_id = self.Spatial_filter1(
+                    self.distance_threshold, class_list[i], local_id=local_id)
+
         # 空间滤波2:根据local_id更新平均距离，同local_id会按照track_id排序
-        group_list = self.Spatial_filter2(class0_list, class1_list)
+        group_list = self.Spatial_filter2(class_list)
+
         # global_id溯源
         return_data, self.global_history = self.find_global(
             group_list, self.global_history)
