@@ -7,9 +7,10 @@ opencv_python==4.8.1.78
 opencv_python_headless==4.8.1.78
 Requests==2.31.0
 scipy==1.11.4
-tqdm==4.66.1
 trimesh==4.0.5
 transforms3d==0.4.1
+tqdm
+pyyaml
 
 #mesh-raycast
 git+https://github.com/szabolcsdombi/python-mesh-raycast.git
