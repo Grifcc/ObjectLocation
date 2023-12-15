@@ -1,0 +1,48 @@
+pipeline:
+  stage1:
+    name: "JsonSource"
+    args:
+      file_path: "simulated_data/simulate_data.json"
+
+  # stage1:
+  #   name:  "UDPSource"
+  #   args:
+  #       ip: "127.0.0.1"
+  #       port: 8888
+
+  stage2:
+    name: "TimeFilter"
+    args:
+      time_slice: 1000
+      max_queue_length: null
+
+  stage3:
+    name: "EstiPosition"
+    args:
+      map_path: "data/JiulongLake.obj"
+      max_queue_length: null
+
+  stage4:
+    name: "SpatialFilter"
+    args:
+      time_slice: 1000
+      distance_threshold: 10.0
+      max_map: 10
+      max_queue_length: null
+
+  # stage5:
+  #   name:  "UnitySink"
+  #   args:
+  #       ip:   "127.0.0.1"
+  #       port_file: "../port.txt"
+  #       max_retries: 5
+
+  # stage5:
+  #   name:  "HttpSink"
+  #   args:
+  #      url: "http://192.168.31.31:8888/jk-ivas/non/controller/postTarPos.do"
+  #      max_retries: 5
+
+  stage5:
+    name: "PrintSink"
+    args: null

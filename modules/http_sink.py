@@ -10,6 +10,10 @@ class HttpSink(Sink):
         self.url = url
         self.max_retries = max_retries
 
+    def close():
+        # 对齐操作
+        pass
+    
     def process(self, data: Package):
         retry_count = 0
         send_data = {}

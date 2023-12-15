@@ -1,23 +1,21 @@
 from framework import Package
 from framework import Source
-import json
+import socket
+import sys
 
 
-class JsonSource(Source):
-    def __init__(self, json_file):
-        super().__init__("json_source")
-        self.json_file = json_file
-        self.data = self.read_json(self.json_file)
-
-    def read_json(self, json_file):
-        with open(json_file, "r") as f:
-            json_data = json.load(f)
-        return json_data["data"]
-
-    def close(self):
-        # 对齐操作
-        pass
-
+class UDPSource(Source):
+    def __init__(self, ip="127.0.0.1", port=8888):
+        super().__init__("udp_source")
+        self.addr = (ip, port)
+        try:
+            self.sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+            self.sock.bind(self.addr)
+        except:
+            self.sock.close()
+            print(f"\033[91mCan't open socket at {self.addr}") 
+            sys.exit(-1)
+            
     def parse_c_pose(self, c_pose: dict):
         pose = []
         pose.append(c_pose["Yaw"])
@@ -38,13 +36,28 @@ class JsonSource(Source):
         cy = img_h / 2
         return [fx, fy, cx, cy], params["distortion_correction_params"]["distortion"]
 
+    def close(self):
+        self.sock.close()
+
     def process(self, packages: list[Package]):
-        if len(self.data) == 0:
+        try:
+            data, address = self.sock.recvfrom(1024)
+            # 处理接收到的数据
+        except socket.timeout as e:
+            return
+        except socket.error as e:
+            print(e)
+            raise
+        try:
+            objs = eval(data.decode("utf-8"))
+            if isinstance(objs, dict):
+                raise TypeError
+        except:
+            print(f"can't convert {data.decode('utf-8')} to dict,plase check")
             return False
-        objs = self.data.pop(0)
-        bbox = Package()
 
         for obj in objs["objs"]:
+            bbox = Package()
             bbox.time = objs["Time"]
             bbox.uav_id = objs["Fly_id"]
             bbox.camera_id = objs["Camera_id"]

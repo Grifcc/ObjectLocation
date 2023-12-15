@@ -164,6 +164,7 @@ class Module:
 
         self.max_queue_length = max_queue_length
         self._is_running = False
+        print(f"Building {self.name}")
 
     def set_input_lock(self, lock: threading.Lock):
         self.input_lock = lock

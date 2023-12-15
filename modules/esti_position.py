@@ -5,8 +5,8 @@ from tools import get_ray, read_mesh, set_K, set_distortion_coeffs, set_camera_p
 
 
 class EstiPosition(Location):
-    def __init__(self, mesh_path=None):
-        super().__init__("EstiPosition",)
+    def __init__(self, mesh_path=None, max_queue_length=None):
+        super().__init__("EstiPosition", max_queue_length)
         self.mesh = read_mesh(mesh_path)  # mesh地图
 
     def get_point(self, data: Package):

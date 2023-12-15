@@ -1,12 +1,14 @@
 from framework import Package
 from framework import Sink
-import requests
-import time
 
 
 class PrintSink(Sink):
     def __init__(self):
         super().__init__("print_sink")
+
+    def close(self):
+        # 对齐操作
+        pass
 
     def process(self, data: Package):
         send_data = {}
