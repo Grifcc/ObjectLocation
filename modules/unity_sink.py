@@ -7,11 +7,11 @@ import json
 
 
 class UnitySink(Sink):
-    def __init__(self, hostip='127.0.0.1', port=8888, max_retries=5, buffsize=1024,):
+    def __init__(self, hostip='127.0.0.1', port=8888, max_retries=5):
         super().__init__("unity_sink")
         self.max_retries = max_retries
         self.address = (hostip, port)
-        self.buffsize = buffsize
+        self.buffsize = 1024
         self.encoding = 'utf-8'
         self.server_socket = None
         self.client_socket = None
