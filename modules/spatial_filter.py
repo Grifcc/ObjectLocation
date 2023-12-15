@@ -157,7 +157,7 @@ class SpatialFilter(Filter):
         from collections import defaultdict
         # 拉成一维
         detections_list = []
-        for i in range(class_list):
+        for i in range(len(class_list)):
             detections_list = detections_list + [item for sublist in class_list[i] for item in sublist]
         # 这里与普通的字典不同，这里与原数据引用的是同一块，会同时改变
         grouped_detections = defaultdict(list)
@@ -231,7 +231,7 @@ class SpatialFilter(Filter):
         class_list = self.classify_classid_uav(packages)
         # 赋值local_id
         local_id = 0
-        for i in len(class_list):
+        for i in range(len(class_list)):
             if len(class_list[i]) != 0:
                 class_list[i], local_id = self.Spatial_filter1(
                     self.distance_threshold, class_list[i], local_id=local_id)
