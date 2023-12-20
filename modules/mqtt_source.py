@@ -4,26 +4,26 @@ import socket
 import sys
 import numpy as np
 from paho.mqtt import client as mqtt_client
+from data import DISTORTION_MAP
+import math
 
-DISTORTION_MAP = {}
 
-
-class UDPSource(Source):
-    def __init__(self, broker_url="192.168.31.158", client_id='sub_camera_param', port=1883, topic_uav_sn="thing/product/sn"):
-        super().__init__("udp_source")
+class MQTTSource(Source):
+    def __init__(self, broker_url="192.168.31.158", port=1883, client_id='sub_camera_param', topic_uav_sn="thing/product/sn", timeout=30):
+        super().__init__("mqtt_source")
 
         self.broker_url = broker_url
         self.client_id = client_id
         self.port = port
         self.topic_uav_sn = topic_uav_sn
 
-        self.max_age = 30   # second
+        self.timeout = timeout   # second
 
         self.topic_map = {}  # key: sn  value: topic
 
         self.buffer: dict = []
 
-        T_body_gimbal = np.array([[1., 0,  0,  0.11],
+        T_plane_gimbal = np.array([[1., 0,  0,  0.11],
                                   [0., 1., 0., 0.0],
                                   [0., 0., 1., 0.05],
                                   [0, 0, 0, 1]]).reshape(4, 4)
@@ -31,7 +31,7 @@ class UDPSource(Source):
                                     [1., 0., 0., 0.0],
                                     [0., 1., 0., 0],
                                     [0, 0, 0, 1]]).reshape(4, 4)
-        self.T_body_camera = T_body_gimbal @ T_gimbal_camera
+        self.T_camera_plane = np.linalg.inv(T_plane_gimbal @ T_gimbal_camera)
 
         # 创建MQTT客户端实例
         self.client = mqtt_client.Client(self.client_id)
@@ -49,7 +49,7 @@ class UDPSource(Source):
         while rc != 0:
             print("%dth connect error, return code %d\n", age, rc)
             age += 1
-            if age > self.max_age:
+            if age > self.timeout:
                 raise TimeoutError("Max retries exceeded")
 
         print("Connected to MQTT Broker!\n")
@@ -67,16 +67,18 @@ class UDPSource(Source):
                 print("Subscribe to: ", topic)
 
         elif msg.topic in self.topic_map.values():
+            print(eval(msg.payload.decode()))
             self.buffera.append(eval(msg.payload.decode()))
 
     def parse_pose(self, c_pose: list):
         pose = []
         uav_pose = np.array(
-            [c_pose[0]["longitude"], c_pose[0]["latitude"], c_pose[0]["altitude"]])
+            [c_pose[0]["longitude"], c_pose[0]["latitude"], c_pose[0]["altitude"], 1]).reshape(4, 1)
+        camera_pose = self.T_camera_plane@uav_pose
         pose.append(c_pose[1]["yaw"])
         pose.append(c_pose[1]["pitch"])
         pose.append(c_pose[1]["roll"])
-        pose.append(uav_pose.tolist())
+        pose.append(camera_pose.flatten()[:3].tolist())
         return pose
 
     def parse_K_D(self, params: dict):
@@ -85,10 +87,10 @@ class UDPSource(Source):
         fov_v = params['fov'][1]
         resolution_x = params['resolution'][0]
         resolution_y = params['resolution'][1]
-        fx = 0
-        fy = 0
-        cx = 0
-        cy = 0
+        cx = resolution_x / 2
+        cy = resolution_y / 2
+        fx = cx * math.tan(math.radians(fov_h)/2.)
+        fy = cy * math.tan(math.radians(fov_v)/2.)
         return [fx, fy, cx, cy], distortion
 
     def close(self):

@@ -1,14 +1,23 @@
 pipeline:
-  stage1:
-    name: "JsonSource"
-    args:
-      file_path: "simulated_data/simulate_data.json"
+  # stage1:
+  #   name: "JsonSource"
+  #   args:
+  #     file_path: "simulated_data/simulate_data.json"
 
   # stage1:
   #   name:  "UDPSource"
   #   args:
   #       ip: "127.0.0.1"
   #       port: 8888
+
+  stage1:
+    name:  "MQTTSource"
+    args:
+        broker_url: "192.168.31.158"
+        port: 1883
+        client_id: 'sub_camera_param'
+        topic_uav_sn: "thing/product/sn"
+        timeout: 30 
 
   stage2:
     name: "TimeFilter"
@@ -20,6 +29,7 @@ pipeline:
     name: "EstiPosition"
     args:
       map_path: "data/JiulongLake.obj"
+      order: "rzyx"
       max_queue_length: null
 
   stage4:
