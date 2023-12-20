@@ -67,8 +67,9 @@ class MQTTSource(Source):
                 print("Subscribe to: ", topic)
 
         elif msg.topic in self.topic_map.values():
-            print(eval(msg.payload.decode()))
-            self.buffera.append(eval(msg.payload.decode()))
+            data = eval(msg.payload.decode())
+            if data["obj_cnt"] != 0:
+                self.buffer.append(data)
 
     def parse_pose(self, c_pose: list):
         pose = []
@@ -103,7 +104,7 @@ class MQTTSource(Source):
             objs = self.buffer.pop()
             for obj in objs["objs"]:
                 bbox = Package()
-                bbox.time = objs["timestamp"]
+                bbox.time = objs["time"]
                 bbox.uav_id = objs["uav_id"]
                 bbox.camera_id = objs["camera_id"]
                 bbox.camera_pose = self.parse_c_pose(
