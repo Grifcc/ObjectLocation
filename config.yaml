@@ -1,9 +1,14 @@
 pipeline:
-  stage1:
-    name: "JsonSource"
-    args:
-      file_path: "simulated_data/simulate_data.json"
+  # stage1:
+  #   name: "JsonSource"
+  #   args:
+  #     file_path: "simulated_data/simulate_data.json"
 
+  stage1:
+    name: "MQTTJsonSource"
+    args:
+      offset: "data/offset.txt"
+      file_path: "data/1703252135_TH7923461373.json"
   # stage1:
   #   name:  "UDPSource"
   #   args:
@@ -23,20 +28,20 @@ pipeline:
   stage2:
     name: "TimeFilter"
     args:
-      time_slice: 1000
+      time_slice: 100
       max_queue_length: null
 
   stage3:
     name: "EstiPosition"
     args:
       map_path: "data/JiulongLake.obj"
-      order: "szxy"
+      order: "rzyx"
       max_queue_length: null
 
   stage4:
     name: "SpatialFilter"
     args:
-      time_slice: 1000
+      time_slice: 100
       distance_threshold: 10.0
       max_map: 10
       max_queue_length: null

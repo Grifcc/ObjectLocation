@@ -101,12 +101,8 @@ class SpatialFilter(Filter):
         # 讲各个相机的观测数据进行local_id，如果相机间观测的位置很接近，认为同一目标。
         for i in range(len(detections_list)):  # uav_id
             list_i = detections_list[i]
-            if len(list_i):  
-                continue
             for j in range(i+1, len(detections_list)):  # uav_id+1
                 list_j = detections_list[j]
-                if len(list_j):
-                    continue
                 # 创建两个列表的距离矩阵，并初始化为最大值
                 matrix_distance = np.full(
                     (len(list_i), len(list_j)), float('inf'))

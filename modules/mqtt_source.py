@@ -87,13 +87,12 @@ class MQTTSource(Source):
 
     def parse_pose(self, c_pose: list):
         pose = []
-        uav_pose = np.array(
-            [*self.convert.W2U([c_pose[0]["longitude"], c_pose[0]["latitude"]]), c_pose[0]["altitude"], 1]).reshape(4, 1)
-        camera_pose = uav_pose
+        utm_point = self.convert.W2U(
+            [c_pose[0]["latitude"], c_pose[0]["longitude"]])
         pose.append(c_pose[1]["yaw"])
         pose.append(c_pose[1]["pitch"])
         pose.append(c_pose[1]["roll"])
-        pose.append(camera_pose.flatten()[:3].tolist())
+        pose.append([*utm_point, c_pose[0]["altitude"]])
         return pose
 
     def parse_K_D(self, params: dict):
@@ -109,8 +108,12 @@ class MQTTSource(Source):
         return [fx, fy, cx, cy], distortion
 
     def parse_bbox(self, bbox, resolution):
-        return [bbox[0]*resolution[0], bbox[1]*resolution[1], bbox[2]*resolution[0], bbox[3]*resolution[1]]
-
+        x = bbox["x"]
+        y = bbox["y"]
+        w = bbox["w"]
+        h = bbox["h"]
+        return [x*resolution[0], y*resolution[1], w*resolution[0], h*resolution[1]]
+    
     def close(self):
         # 停止客户端订阅
         self.client.loop_stop()
@@ -137,7 +140,7 @@ class MQTTSource(Source):
                 bbox.class_id = obj["cls_id"]
                 bbox.tracker_id = obj["track_id"]
                 bbox.uav_pos = obj["pos"]
-                bbox.obj_img = obj['pic']
+                bbox.obj_img = None if obj['pic'] == "None" else obj['pic']
 
                 packages.append(bbox.copy())
 
