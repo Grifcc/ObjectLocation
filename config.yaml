@@ -1,8 +1,8 @@
 pipeline:
-  stage1:
-    name: "JsonSource"
-    args:
-      file_path: "simulated_data/simulate_data.json"
+  # stage1:
+  #   name: "JsonSource"
+  #   args:
+  #     file_path: "simulated_data/simulate_data.json"
 
   # stage1:
   #   name:  "UDPSource"
@@ -13,7 +13,7 @@ pipeline:
   stage1:
     name:  "MQTTSource"
     args:
-        offset: "data/offset.txt"
+        offset: "data/PrincessHotel_offset.txt"
         broker_url: "192.168.31.210"
         port: 1883
         client_id: 'sub_camera_param'
@@ -29,7 +29,7 @@ pipeline:
   stage3:
     name: "EstiPosition"
     args:
-      map_path: "data/JiulongLake.obj"
+      map_path: "data/PrincessHotel.obj"
       order: "rzyx"
       max_queue_length: null
 
@@ -52,7 +52,7 @@ pipeline:
     name:  "HttpSink"
     args:
        url: "http://192.168.31.31:8888/jk-ivas/non/controller/postTarPos.do"
-       offset: "data/offset.txt"
+       offset: "data/PrincessHotel_offset.txt"
        max_retries: 5
 
   # stage5:

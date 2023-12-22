@@ -71,14 +71,15 @@ class MQTTSource(Source):
                 print("sn_from_mqtt: ", sn_from_mqtt)
                 topic = f"thing/product/{sn_from_mqtt}/target_state"
                 self.topic_map[sn_from_mqtt] = topic
-                self.log_files[topic] = open(os.path.join(
-                    LOG_ROOT, f"{time.time()}_{sn_from_mqtt}_log.txt"), "a+", encoding="utf-8")
+                self.log_files[topic] = os.path.join(
+                    LOG_ROOT, f"{time.time()}_{sn_from_mqtt}_log.txt")
                 self.client.subscribe(topic)
                 print("Subscribe to: ", topic)
 
         elif msg.topic in self.topic_map.values():
             data = eval(msg.payload.decode())
-            self.log_files[msg.topic].write(json.loads(data))
+            with open(self.log_files[msg.topic], "a+", encoding="utf-8") as f:
+                f.write(json.loads(data))
             # print(data)
             if data["obj_cnt"] != 0:
                 print(data)
