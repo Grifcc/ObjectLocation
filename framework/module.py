@@ -11,7 +11,7 @@ class Package:
         # Public variables
         # read only
         self.time = time
-        self.uav_id: int = None
+        self.uav_id: str = None
         self.camera_id: int | str = None
         self.camera_pose: list[float] = []  # [yaw,pitch,roll,x,y,z]
         self.camera_K: list[float] = []  # [fx,fy,cx,cy]
