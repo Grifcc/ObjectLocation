@@ -92,18 +92,21 @@ class SpatialFilter(Filter):
         return class_list
 
     # 空间滤波1:赋值local_id(将不同相机间距离相近的点视为同一空间点，使用相同local_id)
-    '''
-    注意:相机内的local_id不同，两个相机间同个local_id最多有两个点
-    输入:distance_threshold, detections_list (距离阈值，观测数据)
-    输出:具有local_id的detections_list
-    '''
-
     def Spatial_filter1(self, distance_threshold, detections_list, local_id=0):
+        '''
+        注意:相机内的local_id不同，两个相机间同个local_id最多有两个点
+        输入:distance_threshold, detections_list (距离阈值，观测数据)
+        输出:具有local_id的detections_list
+        '''
         # 讲各个相机的观测数据进行local_id，如果相机间观测的位置很接近，认为同一目标。
         for i in range(len(detections_list)):  # uav_id
             list_i = detections_list[i]
+            if len(list_i):  
+                continue
             for j in range(i+1, len(detections_list)):  # uav_id+1
                 list_j = detections_list[j]
+                if len(list_j):
+                    continue
                 # 创建两个列表的距离矩阵，并初始化为最大值
                 matrix_distance = np.full(
                     (len(list_i), len(list_j)), float('inf'))
@@ -229,6 +232,7 @@ class SpatialFilter(Filter):
     def process(self, packages: list[Package]):
         # 拆解list，便于后续操作
         class_list = self.classify_classid_uav(packages)
+        
         # 赋值local_id
         local_id = 0
         for i in range(len(class_list)):
@@ -242,4 +246,5 @@ class SpatialFilter(Filter):
         # global_id溯源
         return_data, self.global_history = self.find_global(
             group_list, self.global_history)
+        # TODO: 滤波
         return return_data
