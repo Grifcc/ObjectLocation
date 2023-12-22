@@ -115,14 +115,17 @@ def get_real_point(point, mesh):
 
 
 def read_mesh(mesh_path):
-    mesh = trimesh.load_mesh(mesh_path)
-    all_meshes = [geom for geom in mesh.geometry.values()]
-    # 使用 concatenate 函数将多个 mesh 合并为一个
-    combined_mesh = trimesh.util.concatenate(all_meshes)
-    vertices = combined_mesh.vertices
-    faces = combined_mesh.faces
+    mesh = trimesh.load_mesh(mesh_path) #load or load_mesh
+    assert type(mesh) in [trimesh.scene.scene.Scene,trimesh.base.Trimesh],"Incorrect mesh type. please check it!"
+    
+    if type(mesh) == trimesh.scene.scene.Scene:
+        all_meshes = [geom for geom in mesh.geometry.values()]
+        mesh = trimesh.util.concatenate(all_meshes)
+        
+    vertices = mesh.vertices
+    faces = mesh.faces
     triangles = vertices[faces]
-    triangles = np.array(triangles, dtype='f4')  # 一定要有这一行,不然会有错。
+    triangles = np.array(triangles, dtype='f4') 
     return triangles
 
 
