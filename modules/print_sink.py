@@ -17,6 +17,6 @@ class PrintSink(Sink):
         send_data["obj_cnt"] = 1
         if self.convert:
             data.location[:2] = self.convert.U2W(data.location[:2])
-        send_data["objs"] = [{"id": data.global_id, "uid": data.uid, "tr_id": data.tracker_id,  "local_id": data.local_id, "cls": data.class_id,
+        send_data["objs"] = [{"uav": data.uav_id ,"id": data.global_id, "uid": data.uid, "tr_id": data.tracker_id,  "local_id": data.local_id, "cls": data.class_id,
                               "gis": data.location, "obj_img": data.obj_img}]
         print(send_data)
