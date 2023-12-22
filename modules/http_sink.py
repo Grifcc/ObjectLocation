@@ -16,7 +16,7 @@ class HttpSink(Sink):
         if offset:
             self.convert = UWConvert(offset)
 
-    def close():
+    def close(self):
         # 对齐操作
         pass
 
@@ -28,7 +28,7 @@ class HttpSink(Sink):
         if self.convert:
             data.location[:2] = self.convert.U2W(data.location[:2])
         send_data["objs"] = [{"id": data.global_id, "cls": data.class_id,
-                              "gis": data.location, "obj_img": "http://192.168.31.210:9002/detect/"+data.obj_img}]
+                              "gis": data.location, "obj_img": "http://192.168.31.210:9002/detect/"+data.obj_img  if data.obj_img else "null"}]
         send_data = json.dumps(send_data)
         print(send_data)
         while retry_count < self.max_retries:

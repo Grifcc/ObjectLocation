@@ -46,7 +46,7 @@ class JsonSource(Source):
 
         for obj in objs["objs"]:
             bbox.time = objs["Time"]
-            bbox.uav_id = objs["Fly_id"]
+            bbox.uav_id = "QUHJ_6387"+str(objs["Fly_id"])
             bbox.camera_id = objs["Camera_id"]
             bbox.camera_pose = self.parse_c_pose(objs["Camera"])
             bbox.camera_K, bbox.camera_distortion = self.parse_K_D(
