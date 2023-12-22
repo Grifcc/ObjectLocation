@@ -1,8 +1,8 @@
 pipeline:
-  # stage1:
-  #   name: "JsonSource"
-  #   args:
-  #     file_path: "simulated_data/simulate_data.json"
+  stage1:
+    name: "JsonSource"
+    args:
+      file_path: "simulated_data/simulate_data.json"
 
   # stage1:
   #   name:  "UDPSource"
@@ -13,7 +13,8 @@ pipeline:
   stage1:
     name:  "MQTTSource"
     args:
-        broker_url: "192.168.31.158"
+        offset: "data/offset.txt"
+        broker_url: "192.168.31.210"
         port: 1883
         client_id: 'sub_camera_param'
         topic_uav_sn: "thing/product/sn"
@@ -47,12 +48,14 @@ pipeline:
   #       port_file: "../port.txt"
   #       max_retries: 5
 
-  # stage5:
-  #   name:  "HttpSink"
-  #   args:
-  #      url: "http://192.168.31.31:8888/jk-ivas/non/controller/postTarPos.do"
-  #      max_retries: 5
-
   stage5:
-    name: "PrintSink"
-    args: null
+    name:  "HttpSink"
+    args:
+       url: "http://192.168.31.31:8888/jk-ivas/non/controller/postTarPos.do"
+       offset: "data/offset.txt"
+       max_retries: 5
+
+  # stage5:
+  #   name: "PrintSink"
+  #   args: 
+  #      offset: "data/offset.txt"

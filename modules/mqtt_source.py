@@ -1,15 +1,14 @@
 from framework import Package
 from framework import Source
-import socket
-import sys
 import numpy as np
 from paho.mqtt import client as mqtt_client
 from data import DISTORTION_MAP
 import math
+from tools import UWConvert
 
 
 class MQTTSource(Source):
-    def __init__(self, broker_url="192.168.31.158", port=1883, client_id='sub_camera_param', topic_uav_sn="thing/product/sn", timeout=30):
+    def __init__(self, offset="data/offset.txt",broker_url="192.168.31.158", port=1883, client_id='sub_camera_param', topic_uav_sn="thing/product/sn", timeout=30):
         super().__init__("mqtt_source")
 
         self.broker_url = broker_url
@@ -23,6 +22,8 @@ class MQTTSource(Source):
 
         self.buffer: dict = []
 
+        self.convert = UWConvert(offset)
+            
         T_plane_gimbal = np.array([[1., 0,  0,  0.11],
                                   [0., 1., 0., 0.0],
                                   [0., 0., 1., 0.05],
@@ -58,9 +59,9 @@ class MQTTSource(Source):
         if msg.topic == self.topic_uav_sn:
             json_data = eval(msg.payload.decode())
             sn_from_mqtt = json_data['sn']
-            print("sn_from_mqtt: ", sn_from_mqtt)
 
             if sn_from_mqtt not in self.topic_map:
+                print("sn_from_mqtt: ", sn_from_mqtt)
                 topic = f"thing/product/{sn_from_mqtt}/target_state"
                 self.topic_map[sn_from_mqtt] = topic
                 self.client.subscribe(topic)
@@ -68,14 +69,16 @@ class MQTTSource(Source):
 
         elif msg.topic in self.topic_map.values():
             data = eval(msg.payload.decode())
+            # print(data)
             if data["obj_cnt"] != 0:
+                print(data)
                 self.buffer.append(data)
 
     def parse_pose(self, c_pose: list):
         pose = []
         uav_pose = np.array(
-            [c_pose[0]["longitude"], c_pose[0]["latitude"], c_pose[0]["altitude"], 1]).reshape(4, 1)
-        camera_pose = self.T_camera_plane@uav_pose
+            [*self.convert.W2U([c_pose[0]["longitude"], c_pose[0]["latitude"]]), c_pose[0]["altitude"], 1]).reshape(4, 1)
+        camera_pose = uav_pose
         pose.append(c_pose[1]["yaw"])
         pose.append(c_pose[1]["pitch"])
         pose.append(c_pose[1]["roll"])
@@ -93,7 +96,10 @@ class MQTTSource(Source):
         fx = cx * math.tan(math.radians(fov_h)/2.)
         fy = cy * math.tan(math.radians(fov_v)/2.)
         return [fx, fy, cx, cy], distortion
-
+    
+    def parse_bbox(self,bbox,resolution):
+        return [bbox[0]*resolution_x,bbox[1]*resolution_y,bbox[2]*resolution_x,bbox[3]*resolution_y]
+        
     def close(self):
         # 停止客户端订阅
         self.client.loop_stop()
@@ -103,19 +109,21 @@ class MQTTSource(Source):
         if len(self.buffer):
             objs = self.buffer.pop()
             for obj in objs["objs"]:
+                if obj["cls_id"] not in [2, 3, 4, 5, 6]:
+                    continue
                 bbox = Package()
                 bbox.time = objs["time"]
                 bbox.uav_id = objs["uav_id"]
                 bbox.camera_id = objs["camera_id"]
-                bbox.camera_pose = self.parse_c_pose(
+                bbox.camera_pose = self.parse_pose(
                     [objs['global_pos'], objs['camera']])
                 bbox.camera_K, bbox.camera_distortion = self.parse_K_D(
                     objs['camera'])
-                bbox.Bbox = obj["bbox"]
+                bbox.Bbox = self.parse_bbox(obj["bbox"],objs['camera']['resolution'])
                 bbox.class_id = obj["cls_id"]
                 bbox.tracker_id = obj["track_id"]
                 bbox.uav_pos = obj["pos"]
-                bbox.obj_img = obj['obj_pic']
+                bbox.obj_img = obj['pic']
 
                 packages.append(bbox.copy())
 

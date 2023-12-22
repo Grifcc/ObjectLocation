@@ -3,13 +3,18 @@ from framework import Sink
 import requests
 import time
 import json
+from tools import UWConvert
+
 
 class HttpSink(Sink):
-    def __init__(self, url, max_retries=5):
+    def __init__(self, url, offset=None, max_retries=5):
         super().__init__("http_sink")
         self.url = url
         self.max_retries = max_retries
         self.header = {"content-type": "application/json"}
+        self.convert = None
+        if offset:
+            self.convert = UWConvert(offset)
 
     def close():
         # 对齐操作
@@ -20,9 +25,12 @@ class HttpSink(Sink):
         send_data = {}
         send_data["timestamp"] = data.time
         send_data["obj_cnt"] = 1
+        if self.convert:
+            data.location[:2] = self.convert.U2W(data.location[:2])
         send_data["objs"] = [{"id": data.global_id, "cls": data.class_id,
-                              "gis": data.location, "obj_img": data.obj_img}]
+                              "gis": data.location, "obj_img": "http://192.168.31.210:9002/detect/"+data.obj_img}]
         send_data = json.dumps(send_data)
+        print(send_data)
         while retry_count < self.max_retries:
             response = requests.post(
                 self.url, data=send_data, headers=self.header)

@@ -12,6 +12,7 @@ transforms3d==0.4.1
 tqdm
 pyyaml
 paho-mqtt
+utm
 
 #mesh-raycast
 git+https://github.com/szabolcsdombi/python-mesh-raycast.git
