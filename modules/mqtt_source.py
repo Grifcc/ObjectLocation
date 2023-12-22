@@ -113,6 +113,8 @@ class MQTTSource(Source):
     def close(self):
         # 停止客户端订阅
         self.client.loop_stop()
+        for idx in range(len(self.log_files)):
+            self.log_files[idx].close()
 
     def process(self, packages: list[Package]):
 
