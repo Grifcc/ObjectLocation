@@ -34,7 +34,7 @@ class Package:
         self.local_id: int = None
         self.location: list[float] = []  # (WGS84）
 
-        self.bbox_type = "cxcywh"
+        self.bbox_type = "xywh"
 
     def get_center_point(self) -> list[float]:
         # 均按底边中点计入
