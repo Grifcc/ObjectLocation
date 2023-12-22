@@ -10,6 +10,16 @@ pipeline:
   #       ip: "127.0.0.1"
   #       port: 8888
 
+  stage1:
+    name:  "MQTTSource"
+    args:
+        offset: "data/offset.txt"
+        broker_url: "192.168.31.210"
+        port: 1883
+        client_id: 'sub_camera_param'
+        topic_uav_sn: "thing/product/sn"
+        timeout: 30 
+
   stage2:
     name: "TimeFilter"
     args:
@@ -20,6 +30,7 @@ pipeline:
     name: "EstiPosition"
     args:
       map_path: "data/JiulongLake.obj"
+      order: "rzyx"
       max_queue_length: null
 
   stage4:
@@ -37,12 +48,14 @@ pipeline:
   #       port_file: "../port.txt"
   #       max_retries: 5
 
-  # stage5:
-  #   name:  "HttpSink"
-  #   args:
-  #      url: "http://192.168.31.31:8888/jk-ivas/non/controller/postTarPos.do"
-  #      max_retries: 5
-
   stage5:
-    name: "PrintSink"
-    args: null
+    name:  "HttpSink"
+    args:
+       url: "http://192.168.31.31:8888/jk-ivas/non/controller/postTarPos.do"
+       offset: "data/offset.txt"
+       max_retries: 5
+
+  # stage5:
+  #   name: "PrintSink"
+  #   args: 
+  #      offset: "data/offset.txt"

@@ -16,6 +16,8 @@ class TimeFilter(PreProcess):
                 data_map[map_key] = package
             else:
                 if data_map[map_key].time < package.time:
+                    if data_map[map_key].obj_img !=None:
+                        package.obj_img = data_map[map_key].obj_img
                     data_map[map_key] = package
 
         for package in data_map.values():

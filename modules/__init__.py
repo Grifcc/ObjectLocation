@@ -11,3 +11,4 @@ from .unity_sink import UnitySink
 from .print_sink import PrintSink
 from .http_sink import HttpSink
 
+from .mqtt_source import MQTTSource
