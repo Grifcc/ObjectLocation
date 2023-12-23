@@ -26,14 +26,14 @@ class HttpSink(Sink):
         send_data["timestamp"] = data.time
         send_data["obj_cnt"] = 1
         if self.convert:
-            data.location[:2] = self.convert.U2W(data.location[:2])
+            data.location = self.convert.U2W(data.location)
         send_data["objs"] = [{"id": data.global_id, "cls": data.class_id,
                               "gis": data.location, "obj_img":f"http://192.168.31.210:9002/detect/{data.obj_img}.jpg"  if data.obj_img else "null"}]
-        if send_data["objs"][0]["obj_img"]!="null":
+        if send_data["objs"][0]["obj_img"] != "null":
             print(send_data["objs"][0]["obj_img"])
-            
+
         send_data = json.dumps(send_data)
-        
+
         while retry_count < self.max_retries:
             response = requests.post(
                 self.url, data=send_data, headers=self.header)

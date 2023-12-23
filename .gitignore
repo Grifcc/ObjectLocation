@@ -76,3 +76,7 @@ simulated_data/
 *.mp3
 *.png
 *.jpg
+
+
+#map
+data/map

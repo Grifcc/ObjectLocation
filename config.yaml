@@ -1,16 +1,16 @@
 pipeline:
-  stage1:
-    name: "JsonSource"
-    args:
-      file_path: "simulated_data/simulate_data.json"
-      bbox_type: "cxcywh"
-
   # stage1:
-  #   name: "MQTTJsonSource"
+  #   name: "JsonSource"
   #   args:
-  #       offset: "data/offset.txt"
-  #       bbox_type: "xywh"
-  #       file_path: "data/1703252135_TH7923461373.json"
+  #     file_path: "simulated_data/simulate_data.json"
+  #     bbox_type: "cxcywh"
+
+  stage1:
+    name: "MQTTJsonSource"
+    args:
+        offset: "data/map/JiuLongLake_1223/JiuLongLake_1223_offset.txt"
+        bbox_type: "xywh"
+        file_path: "data/1703252135_TH7923461373.json"
 
   # stage1:
   #   name:  "UDPSource"
@@ -26,6 +26,7 @@ pipeline:
   #       broker_url: "192.168.31.210"
   #       port: 1883
   #       client_id: 'sub_camera_param'
+  #       qos: 2
   #       topic_uav_sn: "thing/product/sn"
   #       timeout: 30
 
@@ -38,8 +39,10 @@ pipeline:
   stage3:
     name: "EstiPosition"
     args:
-      map_path: "data/JiulongLake.obj"
+      map_path: "data/map/JiuLongLake_1223/JiuLongLake_1223.obj"
+      default_height: 60
       order: "rzyx"
+      enable_reloaction: False
       max_queue_length: null
 
   stage4:
@@ -68,4 +71,4 @@ pipeline:
     name: "PrintSink"
     args:
       time_freq: 10
-      offset: "data/offset.txt"
+      offset: "data/map/JiuLongLake_1223/JiuLongLake_1223_offset.txt"
