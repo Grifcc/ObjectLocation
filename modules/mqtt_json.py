@@ -11,7 +11,7 @@ import json
 
 
 class MQTTJsonSource(Source):
-    def __init__(self, offset="data/offset.txt", bbox_type="xywh",json_file="data/log.json"):
+    def __init__(self, offset="data/offset.txt", bbox_type="xywh", json_file="data/log.json"):
         super().__init__("mqtt_json_source")
 
         self.convert = UWConvert(offset)
@@ -23,11 +23,11 @@ class MQTTJsonSource(Source):
     def parse_pose(self, c_pose: list):
         pose = []
         utm_point = self.convert.W2U(
-            [c_pose[0]["latitude"], c_pose[0]["longitude"]])
+            [c_pose[0]["latitude"], c_pose[0]["longitude"],c_pose[0]["altitude"]])
         pose.append(c_pose[1]["yaw"])
         pose.append(c_pose[1]["pitch"])
         pose.append(c_pose[1]["roll"])
-        pose.append([*utm_point, c_pose[0]["altitude"]])
+        pose.append(utm_point)
         return pose
 
     def parse_K_D(self, params: dict):
@@ -60,7 +60,7 @@ class MQTTJsonSource(Source):
         objs = self.json_data.pop(0)
         if objs["obj_cnt"] == 0:
             return True
-        for idx,obj in enumerate(objs["objs"]):
+        for idx, obj in enumerate(objs["objs"]):
             if obj["cls_id"] not in [2, 3, 4, 5, 6]:
                 continue
             bbox = Package()
@@ -76,7 +76,9 @@ class MQTTJsonSource(Source):
                 obj["bbox"], objs['camera']['resolution'])
             bbox.class_id = obj["cls_id"]
             bbox.tracker_id = obj["track_id"]
-            bbox.uav_pos = list(obj["pos"].values())
+            bbox.uav_wgs = [obj["pos"]["latitude"],
+                            obj["pos"]["longitude"], obj["pos"]["altitude"]]
+            bbox.uav_utm = self.convert.W2U(bbox.uav_wgs)
             bbox.obj_img = None if obj['pic'] == "None" else obj['pic']
 
             packages.append(bbox.copy())

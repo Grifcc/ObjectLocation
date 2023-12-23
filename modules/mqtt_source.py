@@ -13,7 +13,7 @@ LOG_ROOT = "./log"
 
 
 class MQTTSource(Source):
-    def __init__(self, offset="data/offset.txt",bbox_type="xywh", broker_url="192.168.31.158", port=1883, client_id='sub_camera_param', topic_uav_sn="thing/product/sn", timeout=30):
+    def __init__(self, offset="data/offset.txt", bbox_type="xywh", broker_url="192.168.31.158", port=1883, client_id='sub_camera_param', topic_uav_sn="thing/product/sn", timeout=30):
         super().__init__("mqtt_source")
 
         self.broker_url = broker_url
@@ -30,7 +30,7 @@ class MQTTSource(Source):
         self.convert = UWConvert(offset)
 
         self.bbox_type = bbox_type
-        
+
         T_plane_gimbal = np.array([[1., 0,  0,  0.11],
                                   [0., 1., 0., 0.0],
                                   [0., 0., 1., 0.05],
@@ -90,11 +90,11 @@ class MQTTSource(Source):
     def parse_pose(self, c_pose: list):
         pose = []
         utm_point = self.convert.W2U(
-            [c_pose[0]["latitude"], c_pose[0]["longitude"]])
+            [c_pose[0]["latitude"], c_pose[0]["longitude"],c_pose[0]["altitude"]])
         pose.append(c_pose[1]["yaw"])
         pose.append(c_pose[1]["pitch"])
         pose.append(c_pose[1]["roll"])
-        pose.append([*utm_point, c_pose[0]["altitude"]])
+        pose.append(utm_point)
         return pose
 
     def parse_K_D(self, params: dict):
@@ -115,7 +115,7 @@ class MQTTSource(Source):
         w = bbox["w"]
         h = bbox["h"]
         return [x*resolution[0], y*resolution[1], w*resolution[0], h*resolution[1]]
-    
+
     def close(self):
         # 停止客户端订阅
         self.client.loop_stop()
@@ -142,7 +142,9 @@ class MQTTSource(Source):
                     obj["bbox"], objs['camera']['resolution'])
                 bbox.class_id = obj["cls_id"]
                 bbox.tracker_id = obj["track_id"]
-                bbox.uav_pos = obj["pos"]
+                bbox.uav_wgs = [obj["pos"]["latitude"],
+                            obj["pos"]["longitude"], obj["pos"]["altitude"]]
+                bbox.uav_utm = self.convert.W2U(bbox.uav_wgs)
                 bbox.obj_img = None if obj['pic'] == "None" else obj['pic']
 
                 packages.append(bbox.copy())

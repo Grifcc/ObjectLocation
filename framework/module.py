@@ -20,7 +20,8 @@ class Package:
         self.class_id: int = None  # 0人1车
         self.class_name: str = None
         self.tracker_id: int = None
-        self.uav_pos: list[float] = []
+        self.uav_wgs: list[float] = []  # for WGS84  [lat,lon,alt]
+        self.uav_utm: list[float] = []  # for UTM
         self.obj_img: str = None
 
         # for evaluation

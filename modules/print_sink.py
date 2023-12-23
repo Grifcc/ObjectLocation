@@ -27,9 +27,9 @@ class PrintSink(Sink):
         send_data["time"] = data.time
         send_data["obj_cnt"] = 1
         if self.convert:
-            data.location[:2] = self.convert.U2W(data.location[:2])
+            data.location = self.convert.U2W(data.location)
         send_data["objs"] = [{"id": data.global_id, "tr_id": data.tracker_id,  "cls": data.class_id,
-                              "gis": data.location, "uav_pos": data.uav_pos, "obj_img": f"{data.obj_img}.jpg" if data.obj_img else "null"}]
+                              "gis": data.location, "uav_pos": data.uav_wgs, "obj_img": f"{data.obj_img}.jpg" if data.obj_img else "null"}]
         self.buffer.append(send_data)
 
         now_time = int(time.time() * 1000)
