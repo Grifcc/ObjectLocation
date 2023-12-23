@@ -4,8 +4,9 @@ import json
 
 
 class JsonSource(Source):
-    def __init__(self, json_file):
+    def __init__(self, json_file,bbox_type="cxcywh"):
         super().__init__("json_source")
+        self.bbox_type = bbox_type
         self.json_file = json_file
         self.data = self.read_json(self.json_file)
 
@@ -43,7 +44,7 @@ class JsonSource(Source):
             return False
         objs = self.data.pop(0)
         bbox = Package()
-
+        bbox.bbox_type = self.bbox_type
         for obj in objs["objs"]:
             bbox.time = objs["Time"]
             bbox.uav_id = "QUHJ_6387"+str(objs["Fly_id"])
