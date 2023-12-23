@@ -1,14 +1,17 @@
 pipeline:
-  # stage1:
-  #   name: "JsonSource"
-  #   args:
-  #     file_path: "simulated_data/simulate_data.json"
-
   stage1:
-    name: "MQTTJsonSource"
+    name: "JsonSource"
     args:
-      offset: "data/offset.txt"
-      file_path: "data/1703252135_TH7923461373.json"
+      file_path: "simulated_data/simulate_data.json"
+      bbox_type: "cxcywh"
+
+  # stage1:
+  #   name: "MQTTJsonSource"
+  #   args:
+  #       offset: "data/offset.txt"
+  #       bbox_type: "xywh"
+  #       file_path: "data/1703252135_TH7923461373.json"
+
   # stage1:
   #   name:  "UDPSource"
   #   args:
@@ -19,11 +22,12 @@ pipeline:
   #   name:  "MQTTSource"
   #   args:
   #       offset: "data/PrincessHotel_offset.txt"
+  #       bbox_type: "xywh"
   #       broker_url: "192.168.31.210"
   #       port: 1883
   #       client_id: 'sub_camera_param'
   #       topic_uav_sn: "thing/product/sn"
-  #       timeout: 30 
+  #       timeout: 30
 
   stage2:
     name: "TimeFilter"
@@ -57,12 +61,11 @@ pipeline:
   #   name:  "HttpSink"
   #   args:
   #      url: "http://192.168.31.31:8888/jk-ivas/non/controller/postTarPos.do"
-  #      offset: "data/PrincessHotel_offset.txt"
+  #      offset: "data/offset.txt"
   #      max_retries: 5
 
   stage5:
     name: "PrintSink"
-    args: 
-      time_freq:  10
+    args:
+      time_freq: 10
       offset: "data/offset.txt"
-       

@@ -10,6 +10,7 @@ import copy
 class PrintSink(Sink):
     def __init__(self, time_freq=5, offset=None):
         super().__init__("print_sink")
+        self.convert = None
         if offset:
             self.convert = UWConvert(offset)
         self.buffer = []

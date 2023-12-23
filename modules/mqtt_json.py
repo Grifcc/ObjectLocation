@@ -11,10 +11,11 @@ import json
 
 
 class MQTTJsonSource(Source):
-    def __init__(self, offset="data/offset.txt", json_file="data/log.json"):
+    def __init__(self, offset="data/offset.txt", bbox_type="xywh",json_file="data/log.json"):
         super().__init__("mqtt_json_source")
 
         self.convert = UWConvert(offset)
+        self.bbox_type = bbox_type
         with open(json_file, "r") as f:
             self.json_data = json.load(f)["content"]
             print("json data length: ", len(self.json_data))
@@ -63,6 +64,7 @@ class MQTTJsonSource(Source):
             if obj["cls_id"] not in [2, 3, 4, 5, 6]:
                 continue
             bbox = Package()
+            bbox.bbox_type = self.bbox_type
             bbox.time = objs["time"]
             bbox.uav_id = objs["uav_id"]
             bbox.camera_id = objs["camera_id"]

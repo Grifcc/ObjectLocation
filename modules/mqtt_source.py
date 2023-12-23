@@ -13,7 +13,7 @@ LOG_ROOT = "./log"
 
 
 class MQTTSource(Source):
-    def __init__(self, offset="data/offset.txt", broker_url="192.168.31.158", port=1883, client_id='sub_camera_param', topic_uav_sn="thing/product/sn", timeout=30):
+    def __init__(self, offset="data/offset.txt",bbox_type="xywh", broker_url="192.168.31.158", port=1883, client_id='sub_camera_param', topic_uav_sn="thing/product/sn", timeout=30):
         super().__init__("mqtt_source")
 
         self.broker_url = broker_url
@@ -29,6 +29,8 @@ class MQTTSource(Source):
 
         self.convert = UWConvert(offset)
 
+        self.bbox_type = bbox_type
+        
         T_plane_gimbal = np.array([[1., 0,  0,  0.11],
                                   [0., 1., 0., 0.0],
                                   [0., 0., 1., 0.05],
@@ -128,6 +130,7 @@ class MQTTSource(Source):
                 if obj["cls_id"] not in [2, 3, 4, 5, 6]:
                     continue
                 bbox = Package()
+                bbox.bbox_type = self.bbox_type
                 bbox.time = objs["time"]
                 bbox.uav_id = objs["uav_id"]
                 bbox.camera_id = objs["camera_id"]
