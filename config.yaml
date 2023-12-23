@@ -26,6 +26,7 @@ pipeline:
   #       broker_url: "192.168.31.210"
   #       port: 1883
   #       client_id: 'sub_camera_param'
+  #       qos: 2
   #       topic_uav_sn: "thing/product/sn"
   #       timeout: 30
 

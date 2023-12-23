@@ -1,7 +1,7 @@
 from framework import Package
 from framework import Source
 import numpy as np
-from paho.mqtt import client as mqtt_client
+from paho.mqtt import client
 from data import DISTORTION_MAP
 import math
 from tools import UWConvert
@@ -13,13 +13,15 @@ LOG_ROOT = "./log"
 
 
 class MQTTSource(Source):
-    def __init__(self, offset="data/offset.txt", bbox_type="xywh", broker_url="192.168.31.158", port=1883, client_id='sub_camera_param', topic_uav_sn="thing/product/sn", timeout=30):
+    def __init__(self, offset="data/offset.txt", bbox_type="xywh", broker_url="192.168.31.158", port=1883, client_id='sub_camera_param', qos=2, topic_uav_sn="thing/product/sn", timeout=30):
         super().__init__("mqtt_source")
 
         self.broker_url = broker_url
         self.client_id = client_id
         self.port = port
         self.topic_uav_sn = topic_uav_sn
+
+        self.qos = qos
 
         self.timeout = timeout   # second
 
@@ -44,11 +46,9 @@ class MQTTSource(Source):
         self.log_files = {}   # key: topic  values: file
 
         # 创建MQTT客户端实例
-        self.client = mqtt_client.Client(self.client_id)
+        self.client = client.Client(self.client_id)
         self.client.on_connect = self.on_connect
         self.client.connect(self.broker_url, self.port)
-        # 订阅话题
-        self.client.subscribe(topic_uav_sn)
         # 设置回调函数，用于处理消息接收事件
         self.client.on_message = self.on_message
         # 开始循环订阅
@@ -63,6 +63,11 @@ class MQTTSource(Source):
                 raise TimeoutError("Max retries exceeded")
 
         print("Connected to MQTT Broker!\n")
+        # 订阅话题接受uav sn
+        self.client.subscribe(self.topic_uav_sn, qos=self.qos)
+        for topic in self.topic_map.values():
+            self.client.subscribe(topic, qos=self.qos)
+            print("Subscribe to: ", topic)
 
     def on_message(self, client, userdata, msg):
         if msg.topic == self.topic_uav_sn:
@@ -90,7 +95,7 @@ class MQTTSource(Source):
     def parse_pose(self, c_pose: list):
         pose = []
         utm_point = self.convert.W2U(
-            [c_pose[0]["latitude"], c_pose[0]["longitude"],c_pose[0]["altitude"]])
+            [c_pose[0]["latitude"], c_pose[0]["longitude"], c_pose[0]["altitude"]])
         pose.append(c_pose[1]["yaw"])
         pose.append(c_pose[1]["pitch"])
         pose.append(c_pose[1]["roll"])
@@ -143,7 +148,7 @@ class MQTTSource(Source):
                 bbox.class_id = obj["cls_id"]
                 bbox.tracker_id = obj["track_id"]
                 bbox.uav_wgs = [obj["pos"]["latitude"],
-                            obj["pos"]["longitude"], obj["pos"]["altitude"]]
+                                obj["pos"]["longitude"], obj["pos"]["altitude"]]
                 bbox.uav_utm = self.convert.W2U(bbox.uav_wgs)
                 bbox.obj_img = None if obj['pic'] == "None" else obj['pic']
 
