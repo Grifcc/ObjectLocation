@@ -28,9 +28,10 @@ class HttpSink(Sink):
         if self.convert:
             data.location = self.convert.U2W(data.location)
         send_data["objs"] = [{"id": data.global_id, "cls": data.class_id,
-                              "gis": data.location, "obj_img":f"http://192.168.31.210:9002/detect/{data.obj_img}.jpg"  if data.obj_img else "null"}]
+                              "gis": data.location, "bbox": data.norm_Bbox,
+                              "obj_img": f"http://192.168.31.210:9002/detect/{data.obj_img}.jpg" if data.obj_img else "null"}]
         if send_data["objs"][0]["obj_img"] != "null":
-            print(send_data["objs"][0]["obj_img"])
+            print("\033[92m"+send_data["objs"][0]["obj_img"]+"\033[0m")
 
         send_data = json.dumps(send_data)
 

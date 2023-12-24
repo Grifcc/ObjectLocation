@@ -72,6 +72,8 @@ class MQTTJsonSource(Source):
                 [objs['global_pos'], objs['camera']])
             bbox.camera_K, bbox.camera_distortion = self.parse_K_D(
                 objs['camera'])
+            bbox.norm_Bbox = [obj["bbox"]["x"], obj["bbox"]["y"],
+                                  obj["bbox"]["w"], obj["bbox"]["h"]]
             bbox.Bbox = self.parse_bbox(
                 obj["bbox"], objs['camera']['resolution'])
             bbox.class_id = obj["cls_id"]

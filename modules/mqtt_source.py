@@ -87,7 +87,7 @@ class MQTTSource(Source):
             data = eval(msg.payload.decode())
             with open(self.log_files[msg.topic], "a+", encoding="utf-8") as f:
                 f.write(json.loads(data))
-            # print(data)
+                f.write("\n")
             if data["obj_cnt"] != 0:
                 print(data)
                 self.buffer.append(data)
@@ -145,6 +145,8 @@ class MQTTSource(Source):
                     objs['camera'])
                 bbox.Bbox = self.parse_bbox(
                     obj["bbox"], objs['camera']['resolution'])
+                bbox.norm_Bbox = [obj["bbox"]["x"], obj["bbox"]["y"],
+                                  obj["bbox"]["w"], obj["bbox"]["h"]]
                 bbox.class_id = obj["cls_id"]
                 bbox.tracker_id = obj["track_id"]
                 bbox.uav_wgs = [obj["pos"]["latitude"],

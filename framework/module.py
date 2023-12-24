@@ -17,6 +17,7 @@ class Package:
         self.camera_K: list[float] = []  # [fx,fy,cx,cy]
         self.camera_distortion: list[float] = []  # [k1,k2,p1,p2]
         self.Bbox: list[int] = []  # [x,y,w,h]
+        self.norm_Bbox: list[float] = []  # [x,y,w,h] 归一化后的bbox
         self.class_id: int = None  # 0人1车
         self.class_name: str = None
         self.tracker_id: int = None
