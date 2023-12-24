@@ -1,3 +1,11 @@
+global:
+    bbox_type: &bbox_type "xywh"
+    map_path: &map_path "data/map/JiuLongLake_v1223/mesh.obj"
+    offset: &offset "data/map/JiuLongLake_v1223/offset.txt"
+    time_slice: &time_slice 100
+    enable_reloaction: &enable_reloaction False
+    order: &order "rzyx"
+
 pipeline:
   # stage1:
   #   name: "JsonSource"
@@ -8,8 +16,8 @@ pipeline:
   stage1:
     name: "MQTTJsonSource"
     args:
-        offset: "data/map/JiuLongLake_1223/JiuLongLake_1223_offset.txt"
-        bbox_type: "xywh"
+        offset: *offset
+        bbox_type: *bbox_type
         file_path: "data/1703252135_TH7923461373.json"
 
   # stage1:
@@ -21,8 +29,8 @@ pipeline:
   # stage1:
   #   name:  "MQTTSource"
   #   args:
-  #       offset: "data/PrincessHotel_offset.txt"
-  #       bbox_type: "xywh"
+  #       offset: *offset
+  #       bbox_type: *bbox_type
   #       broker_url: "192.168.31.210"
   #       port: 1883
   #       client_id: 'sub_camera_param'
@@ -33,22 +41,22 @@ pipeline:
   stage2:
     name: "TimeFilter"
     args:
-      time_slice: 100
+      time_slice: *time_slice
       max_queue_length: null
 
   stage3:
     name: "EstiPosition"
     args:
-      map_path: "data/map/JiuLongLake_1223/JiuLongLake_1223.obj"
+      map_path: *map_path
       default_height: 60
-      order: "rzyx"
-      enable_reloaction: False
+      order: *order
+      enable_reloaction: *enable_reloaction
       max_queue_length: null
 
   stage4:
     name: "SpatialFilter"
     args:
-      time_slice: 100
+      time_slice: *time_slice
       distance_threshold: 10.0
       max_map: 10
       max_queue_length: null
@@ -64,11 +72,11 @@ pipeline:
   #   name:  "HttpSink"
   #   args:
   #      url: "http://192.168.31.31:8888/jk-ivas/non/controller/postTarPos.do"
-  #      offset: "data/offset.txt"
+  #      offset: *offset
   #      max_retries: 5
 
   stage5:
     name: "PrintSink"
     args:
       time_freq: 10
-      offset: "data/map/JiuLongLake_1223/JiuLongLake_1223_offset.txt"
+      offset: *offset
