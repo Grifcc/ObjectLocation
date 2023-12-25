@@ -2,7 +2,7 @@ from framework import Package
 from framework import Source
 import numpy as np
 from paho.mqtt import client
-from data import DISTORTION_MAP
+from data import DISTORTION_MAP,CLS_MAP
 import math
 from tools import UWConvert
 import time
@@ -80,13 +80,13 @@ class MQTTSource(Source):
                 self.topic_map[sn_from_mqtt] = topic
                 self.log_files[topic] = os.path.join(
                     LOG_ROOT, f"{time.time()}_{sn_from_mqtt}_log.txt")
-                self.client.subscribe(topic)
+                self.client.subscribe(topic,qos=self.qos)
                 print("Subscribe to: ", topic)
 
         elif msg.topic in self.topic_map.values():
             data = eval(msg.payload.decode())
             with open(self.log_files[msg.topic], "a+", encoding="utf-8") as f:
-                f.write(json.loads(data))
+                f.write(json.dumps(data))
                 f.write("\n")
             if data["obj_cnt"] != 0:
                 print(data)
@@ -132,7 +132,11 @@ class MQTTSource(Source):
         if len(self.buffer):
             objs = self.buffer.pop()
             for obj in objs["objs"]:
-                if obj["cls_id"] not in [2, 3, 4, 5, 6]:
+                if obj["cls_id"] in CLS_MAP.keys():
+                    cls_id = CLS_MAP[obj["cls_id"]]
+                else:
+                    cls_id = 98  # unknow
+                if cls_id not in [2, 3, 4, 5, 6]:
                     continue
                 bbox = Package()
                 bbox.bbox_type = self.bbox_type
@@ -147,7 +151,7 @@ class MQTTSource(Source):
                     obj["bbox"], objs['camera']['resolution'])
                 bbox.norm_Bbox = [obj["bbox"]["x"], obj["bbox"]["y"],
                                   obj["bbox"]["w"], obj["bbox"]["h"]]
-                bbox.class_id = obj["cls_id"]
+                bbox.class_id = cls_id
                 bbox.tracker_id = obj["track_id"]
                 bbox.uav_wgs = [obj["pos"]["latitude"],
                                 obj["pos"]["longitude"], obj["pos"]["altitude"]]
