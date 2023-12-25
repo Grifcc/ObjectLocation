@@ -80,3 +80,6 @@ simulated_data/
 
 #map
 data/map
+
+#log
+log

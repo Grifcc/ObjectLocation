@@ -2,7 +2,7 @@ from framework import Package
 from framework import Source
 import numpy as np
 from paho.mqtt import client as mqtt_client
-from data import DISTORTION_MAP
+from data import DISTORTION_MAP,CLS_MAP
 import math
 from tools import UWConvert
 import time
@@ -61,7 +61,11 @@ class MQTTJsonSource(Source):
         if objs["obj_cnt"] == 0:
             return True
         for idx, obj in enumerate(objs["objs"]):
-            if obj["cls_id"] not in [2, 3, 4, 5, 6]:
+            if obj["cls_id"] in CLS_MAP.keys():
+                    cls_id = CLS_MAP[obj["cls_id"]]
+            else:
+                cls_id = 98  # unknow
+            if cls_id not in [2, 3, 4, 5, 6]:
                 continue
             bbox = Package()
             bbox.bbox_type = self.bbox_type
