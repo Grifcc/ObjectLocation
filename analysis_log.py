@@ -1,36 +1,57 @@
-import matplotlib
-matplotlib.use('TkAgg')
-import matplotlib.pyplot as plt
+from modules import EstiPosition
+from tools import ParseMsg, generate_n_colors
 import json
-from tools import UWConvert, generate_n_colors
+import matplotlib.pyplot as plt
+from tracker import Sort
+import numpy as np
 
-log_path = "./data/20231222_21h35m35s_TH7923461373.log"
+
+RELOACTION = False
+REID = True
+
+log_path = "log_sqr\\20231226_16h13m59s_80.log"
+parse = ParseMsg("data\map\JiuLongLake_v1223\offset.txt")
+
+
+esti = EstiPosition(mesh_path="data\map\JiuLongLake_v1223\mesh.obj",
+                    enable=False)
+
+tracker = Sort(15, 3, 3)  # max age, min hits, dis threshold
 with open(log_path, "r") as f:
     data = [json.loads(i) for i in f.readlines()]
+print("total packages: ", len(data))
 
-data = [i for i in data if i["obj_cnt"] != 0]
+packages = []
+for i in data:
+    packages.extend(parse.parse_msg(i))
 
+packages = sorted(packages, key=lambda x: x.time)  # 时间排序
+print("total time: ", packages[-1].time - packages[0].time)
 
-convert = UWConvert("data\map\JiuLongLake_v1223\offset.txt")
+if REID:
+    pass
 
-points = {}
-for objs in data:
-    for obj in objs["objs"]:
-        if obj["track_id"] not in points.keys():
-            points[obj["track_id"]] = []
-        else:
-            points[obj["track_id"]].append(convert.W2U(
-                [obj["pos"]["latitude"], obj["pos"]["longitude"], obj["pos"]["altitude"]]))
+tracklets = {}
+for i in packages:
+    if i.tracker_id not in tracklets:
+        tracklets[i.tracker_id] = []
+    tracklets[i.tracker_id].append(i)
+print("total tracklets: ", len(tracklets.keys()))
 
-colors = generate_n_colors(len(points.keys()))
+colors = dict(zip(list(tracklets.keys()),
+              generate_n_colors(len(tracklets.keys()))))
+
 fig = plt.figure()
 ax = fig.add_subplot(111, projection='3d')
 
-color_idx = 0
-for k, v in points.items():
-    for i in v:
-        ax.scatter(i[0], i[1], i[2], c=colors[color_idx])
-    color_idx += 1
+
+for id, lets in tracklets.items():
+    for idx, val in enumerate(lets):
+        tracklets[id][idx].location = esti.get_point_form_uav_object_point(
+            val) if RELOACTION   else val.uav_utm[:]
+        ax.scatter(tracklets[id][idx].location[0], tracklets[id]
+                   [idx].location[1], tracklets[id][idx].location[2], c=colors[id])
+
 
 ax.set_xlabel('X')
 ax.set_ylabel('Y')
