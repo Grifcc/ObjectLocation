@@ -2,7 +2,7 @@ from paho.mqtt import client
 from queue import Queue
 from .record_log import Log
 import time
-
+import json
 
 class MqttClient:
     def __init__(self,
@@ -70,7 +70,7 @@ class MqttClient:
             data = eval(msg.payload.decode())
             self.buffer.put_nowait(data)
             # log
-            self.log.record(data)
+            self.log.record(json.dumps(data))
 
     def start(self):
         times_count = 0

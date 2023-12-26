@@ -39,6 +39,8 @@ class Log:
         self.log_print = log_print
 
     def close_record(self):
-        if self.f.is_open():
+        try:
             self.f.close()
+        except:
+            pass
         print("Log file closed!")
