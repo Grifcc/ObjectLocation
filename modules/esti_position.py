@@ -40,9 +40,9 @@ class EstiPosition(Location):
         result = mesh_raycast.raycast(
             p_camera.flatten(), ray, self.mesh)
         if len(result) == 0:  # TODO
-            l = (self.default_height - t) / -ray[2]
+            l = (self.default_height - p_camera) / -ray[2]
             # 计算交点坐标
-            inter_point = t - l * ray.reshape(3, 1)
+            inter_point = p_camera - l * ray.reshape(3, 1)
             return inter_point.flatten().tolist()
         else:
             return min(result, key=lambda x: x['distance'])[
