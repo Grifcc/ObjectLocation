@@ -17,7 +17,7 @@ def parse_K_D(params: dict):
     return [fx, fy, cx, cy], distortion
 
 
-def parse_bbox( bbox, resolution):
+def parse_bbox(bbox, resolution):
     x = bbox["x"]
     y = bbox["y"]
     w = bbox["w"]
@@ -42,6 +42,8 @@ class ParseMsg:
         return pose
 
     def parse_msg(self, msg):
+        if msg == None:
+            return []
         packages = []
         for obj in msg["objs"]:
             if obj["cls_id"] in CLS_MAP.keys():

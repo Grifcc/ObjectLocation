@@ -4,12 +4,12 @@ import time
 
 class Log:
     def __init__(self, log_path, log_name=None, eveytime=True, enable=True):
-        if not enable:
+        self.enable = enable
+        if not self.enable:
             return
         self.log_path = log_path
         time_recoder = time.strftime("%Y%m%d_%Hh%Mm%Ss", time.localtime())
         self.eveytime = eveytime
-        self.enable = enable
 
         if not os.path.exists(self.log_path):
             os.makedirs(self.log_path)
