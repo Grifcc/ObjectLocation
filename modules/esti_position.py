@@ -33,8 +33,7 @@ class EstiPosition(Location):
                 'point']
         
     def get_point_form_uav_object_point(self, data: Package): 
-        R, t, _ = set_camera_pose(data.camera_pose, order=self.order)
-        p_camera = t
+        p_camera = np.array(data.camera_pose[3:]).reshape(3,1)
         p_obj = np.array([data.uav_utm]).reshape(3,1)
         ray = p_obj - p_camera
         ray = ray / np.linalg.norm(ray)
