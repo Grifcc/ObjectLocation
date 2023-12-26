@@ -36,7 +36,7 @@ class EstiPosition(Location):
         R, t, _ = set_camera_pose(data.camera_pose, order=self.order)
         p_camera = t
         p_obj = np.array([data.uav_utm]).reshape(3,1)
-        ray = p_camera - p_obj
+        ray = p_obj - p_camera
         ray = ray / np.linalg.norm(ray)
         result = mesh_raycast.raycast(
             p_camera.flatten(), ray, self.mesh)
