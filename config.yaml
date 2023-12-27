@@ -2,7 +2,7 @@ global:
     bbox_type: &bbox_type "xywh"
     map_path: &map_path "data/map/JiuLongLake_v1223/mesh.obj"
     offset: &offset "data/map/JiuLongLake_v1223/offset.txt"
-    time_slice: &time_slice 500
+    time_slice: &time_slice 10
     enable_reloaction: &enable_reloaction False
     order: &order "rzyx"
 
@@ -18,7 +18,7 @@ pipeline:
     args:
         offset: *offset
         bbox_type: *bbox_type
-        file_path: "log_reid\\20231226_17h02m35s.log"
+        file_path: "log_sqr\\20231226_16h13m59s_80.log"
 
   # stage1:
   #   name:  "UDPSource"
