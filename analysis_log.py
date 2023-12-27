@@ -4,17 +4,17 @@ import json
 import matplotlib.pyplot as plt
 from tracker import Sort
 import numpy as np
-
+from matplotlib.animation import FuncAnimation
 
 RELOACTION = True
 REID = True
 
-log_path = "log/log.log"
+log_path = "log/mqtt_source/20231227_13h46m00s.log"
 
-parse = ParseMsg("data\map\JiuLongLake_v1223\offset.txt")
+parse = ParseMsg("data/map/JiuLongLake_v1223/offset.txt")
 
 
-esti = EstiPosition(mesh_path="data\map\JiuLongLake_v1223\mesh.obj",
+esti = EstiPosition(mesh_path="data/map/JiuLongLake_v1223/mesh.obj",
                     enable=False)
 
 tracker = Sort(10, 4, 3)  # max age, min hits, dis threshold
@@ -76,4 +76,8 @@ for id, lets in tracklets.items():
 ax.set_xlabel('X')
 ax.set_ylabel('Y')
 ax.set_zlabel('Z')
-plt.show()
+def update_view(frame):
+    ax.view_init(elev=10, azim=frame)
+
+ani = FuncAnimation(fig, update_view, frames=200, interval=50)
+ani.save("vis.mp4", writer='ffmpeg')

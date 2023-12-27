@@ -31,14 +31,15 @@ class HttpSink(Sink):
                               "gis": data.location, "bbox": data.norm_Bbox,
                               "obj_img": f"http://192.168.31.210:9002/detect/{data.obj_img}.jpg" if data.obj_img else "null"}]
         if send_data["objs"][0]["obj_img"] != "null":
-            print("\033[92m"+send_data["objs"][0]["obj_img"]+"\033[0m")
+            print("\033[92mHttp:"+send_data["objs"][0]["obj_img"]+"\033[0m")
 
         send_data = json.dumps(send_data)
-
+        
         while retry_count < self.max_retries:
             response = requests.post(
                 self.url, data=send_data, headers=self.header)
             if response.status_code == 200 and eval(response.text)["resCode"] == 1:
+                print(f"\033[92mHttp:{data.time}\033[0m")
                 return
             else:
                 retry_count += 1
