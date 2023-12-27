@@ -83,3 +83,5 @@ data/map
 
 #log
 log
+log*/
+*.log
