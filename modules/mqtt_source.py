@@ -23,9 +23,9 @@ class MQTTSource(Source):
         def print_writeonce(msg):
             data = json.loads(msg)
             # 打印黄色
-            print("\033[33mMQTT: ", data["time"], data["obj_cnt"], "\033[0m")
+            print("\033[35mMQTT: ", data["time"], data["obj_cnt"], "\033[0m")
             for obj in data["objs"]:
-                if obj["pic"] != None:
+                if obj["pic"] != "None":
                     print("\033[32mMQTT: ", obj["pic"], ".jpg\033[0m")
         my_log.log_show(print_writeonce)   
             
