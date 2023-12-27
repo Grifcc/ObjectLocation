@@ -57,5 +57,5 @@ class MQTTSource(Source):
     def process(self, packages: list[Package]):
         objs = self.client.get_data()
         package = self.parse_msg.parse_msg(objs)
-        packages.extend(package)
+        packages.extend(package[:])  #可能存在问题
         return True
