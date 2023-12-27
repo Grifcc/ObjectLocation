@@ -2,7 +2,7 @@ global:
     bbox_type: &bbox_type "xywh"
     map_path: &map_path "data/map/JiuLongLake_v1223/mesh.obj"
     offset: &offset "data/map/JiuLongLake_v1223/offset.txt"
-    time_slice: &time_slice 100
+    time_slice: &time_slice 500
     enable_reloaction: &enable_reloaction False
     order: &order "rzyx"
 
@@ -14,11 +14,11 @@ pipeline:
   #     bbox_type: "cxcywh"
 
   stage1:
-    name: "MQTTJsonSource"
+    name: "MQTTLogSource"
     args:
         offset: *offset
         bbox_type: *bbox_type
-        file_path: "data/1703252135_TH7923461373.json"
+        file_path: "log_reid\\20231226_17h02m35s.log"
 
   # stage1:
   #   name:  "UDPSource"
@@ -39,12 +39,6 @@ pipeline:
   #       timeout: 30
 
   stage2:
-    name: "TimeFilter"
-    args:
-      time_slice: *time_slice
-      max_queue_length: null
-
-  stage3:
     name: "EstiPosition"
     args:
       map_path: *map_path
@@ -53,7 +47,21 @@ pipeline:
       enable_reloaction: *enable_reloaction
       max_queue_length: null
 
+  stage3:
+    name: "MOTracker"
+    args:
+      max_age: 10
+      min_hits: 4
+      distance_threshold: 4
+      max_queue_length: null
+
   stage4:
+    name: "TimeFilter"
+    args:
+      time_slice: *time_slice
+      max_queue_length: null
+
+  stage5:
     name: "SpatialFilter"
     args:
       time_slice: *time_slice
@@ -61,22 +69,22 @@ pipeline:
       max_map: 10
       max_queue_length: null
 
-  # stage5:
+  # stage6:
   #   name:  "UnitySink"
   #   args:
   #       ip:   "127.0.0.1"
   #       port_file: "../port.txt"
   #       max_retries: 5
 
-  # stage5:
-  #   name:  "HttpSink"
-  #   args:
-  #      url: "http://192.168.31.31:8888/jk-ivas/non/controller/postTarPos.do"
-  #      offset: *offset
-  #      max_retries: 5
-
-  stage5:
-    name: "PrintSink"
+  stage6:
+    name:  "HttpSink"
     args:
-      time_freq: 10
-      offset: *offset
+       url: "http://192.168.31.31:8888/jk-ivas/non/controller/postTarPos.do"
+       offset: *offset
+       max_retries: 5
+
+  # stage6:
+  #   name: "PrintSink"
+  #   args:
+  #     time_freq: 10
+  #     offset: *offset
