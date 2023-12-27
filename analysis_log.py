@@ -6,30 +6,53 @@ from tracker import Sort
 import numpy as np
 
 
-RELOACTION = False
+RELOACTION = True
 REID = True
 
-log_path = "log_sqr\\20231226_16h13m59s_80.log"
+log_path = "log/log.log"
+
 parse = ParseMsg("data\map\JiuLongLake_v1223\offset.txt")
 
 
 esti = EstiPosition(mesh_path="data\map\JiuLongLake_v1223\mesh.obj",
                     enable=False)
 
-tracker = Sort(15, 3, 3)  # max age, min hits, dis threshold
+tracker = Sort(10, 4, 3)  # max age, min hits, dis threshold
 with open(log_path, "r") as f:
     data = [json.loads(i) for i in f.readlines()]
+
+data = sorted(data, key=lambda x: x["time"])
 print("total packages: ", len(data))
+print("total time: ", data[-1]["time"] - data[0]["time"])
+
+
+# 画时间差分
+y = []
+for i in range(1, len(data)):
+    y.append(data[i]["time"] - data[i-1]["time"])
+
+plt.plot(list(range(len(y))), y)
+plt.savefig("delta_time.png")
+plt.close()
+
 
 packages = []
-for i in data:
-    packages.extend(parse.parse_msg(i))
+for mqtt_package in data:
+    objs = parse.parse_msg(mqtt_package)
+    points = []
+    cls_cnt = 0
+    for idx, obj in enumerate(objs):
+        objs[idx].location = esti.get_point_form_uav_object_point(
+            obj) if RELOACTION else obj.uav_utm[:]
+        points.append([*objs[idx].location, obj.class_id])
 
-packages = sorted(packages, key=lambda x: x.time)  # 时间排序
-print("total time: ", packages[-1].time - packages[0].time)
+    if REID:
+        points = np.array(points).reshape(-1, 4)
+        ret = tracker.update(points)
+        for i, t in enumerate(ret):
+            objs[i].tracker_id = t[4]
 
-if REID:
-    pass
+    packages.extend(objs)  # 添加到队列
 
 tracklets = {}
 for i in packages:
@@ -47,11 +70,8 @@ ax = fig.add_subplot(111, projection='3d')
 
 for id, lets in tracklets.items():
     for idx, val in enumerate(lets):
-        tracklets[id][idx].location = esti.get_point_form_uav_object_point(
-            val) if RELOACTION   else val.uav_utm[:]
         ax.scatter(tracklets[id][idx].location[0], tracklets[id]
                    [idx].location[1], tracklets[id][idx].location[2], c=colors[id])
-
 
 ax.set_xlabel('X')
 ax.set_ylabel('Y')

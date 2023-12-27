@@ -2,7 +2,6 @@ from filterpy.kalman import KalmanFilter
 import numpy as np
 
 
-
 class KalmanPointTracker(object):
     """
     This class represents the internal state of individual tracked objects observed as bbox.
@@ -26,16 +25,18 @@ class KalmanPointTracker(object):
                               [0, 1, 0, 0, 0, 0],
                               [0, 0, 1, 0, 0, 0]])
 
+        self.cls_id = point[3]  # x,y,z, cls_id
         self.kf.R[2:, 2:] *= 10.
         self.kf.P[4:, 4:] *= 10.  # give high uncertainty to the unobservable initial velocities
         self.kf.P *= 10.
         self.kf.Q[-1, -1] *= 0.01
         self.kf.Q[4:, 4:] *= 0.01
 
-        self.kf.x[:3] = point.reshape((3, 1))
+        self.kf.x[:3] = point[:3].reshape((3, 1))
         self.time_since_update = 0
         self.id = KalmanPointTracker.count
         KalmanPointTracker.count += 1
+
         self.history = []
         self.hits = 0
         self.hit_streak = 0
@@ -69,4 +70,4 @@ class KalmanPointTracker(object):
         """
         Returns the current bounding box estimate.
         """
-        return self.kf.x[:3].reshape((1,3))
+        return self.kf.x[:3].reshape((1, 3))
