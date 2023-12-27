@@ -1,8 +1,7 @@
 import numpy as np
-import scipy
 from scipy.spatial.distance import cdist
 from .KalmanFilter import KalmanPointTracker
-import matplotlib.pyplot as plt
+
 
 
 def linear_assignment(cost_matrix):
@@ -82,59 +81,85 @@ class Sort(object):
         self.max_age = max_age
         self.min_hits = min_hits
         self.distance_threshold = distance_threshold
-        self.trackers = []
+        self.trackers_map = {}
         self.frame_count = 0
 
-    def update(self, points=np.empty((0, 3))):
+    def update(self, observers=np.empty((0, 4))):
         """
         Params:
-        points - a numpy array of points in the format [[x1,y1,z1],[x2,y2,z2],...]
+        points - a numpy array of points in the format [[x1,y1,z1,cls1],[x2,y2,z2,cls2],...]
         Requires: this method must be called once for each frame even with empty points (use np.empty((0, 5)) for frames without points).
         Returns the a similar array, where the last column is the object ID.
 
         NOTE: The number of objects returned may differ from the number of points provided.
         """
         self.frame_count += 1
-        # get predicted locations from existing trackers.
-        trks = np.zeros((len(self.trackers), 3))
-        to_del = []
-        ret = []
-        for t, trk in enumerate(trks):
-            pos = self.trackers[t].predict()[0]
-            trk[:] = [pos[0], pos[1], pos[2]]
-            if np.any(np.isnan(pos)):
-                to_del.append(t)
-        trks = np.ma.compress_rows(np.ma.masked_invalid(trks))
-        for t in reversed(to_del):
-            self.trackers.pop(t)
 
-        matched, unmatched_points, unmatched_trks = associate_points_to_trackers(
-            points, trks, self.distance_threshold)
+        points_map = {}
+        ret = np.zeros((observers.shape[0], 5))
 
-        # update matched trackers with assigned points
-        for m in matched:
-            self.trackers[m[1]].update(points[m[0], :])
+        for i, point in enumerate(observers):
+            cls = point[3]
+            if cls not in points_map.keys():
+                points_map[cls] = []
+            points_map[cls].append(i)
 
-        # create and initialise new trackers for unmatched points
-        for i in unmatched_points:
-            trk = KalmanPointTracker(points[i, :])
-            self.trackers.append(trk)
+        for cls, ids in points_map.items():
 
-        i = len(self.trackers)
-        for trk in reversed(self.trackers):
-            d = trk.get_state()[0]
-            if (trk.time_since_update < 1) \
-                    and (trk.hit_streak >= self.min_hits or self.frame_count <= self.min_hits):
-                # +1 as MOT benchmark requires positive
-                ret.append(np.concatenate((d, [trk.id+1])).reshape(1, -1))
-            i -= 1
-            # remove dead tracklet
-            if (trk.time_since_update > self.max_age):
-                self.trackers.pop(i)
+            # noval class trackers
+            if cls not in self.trackers_map.keys():
+                self.trackers_map[cls] = []
+
+            # get predicted locations from existing trackers.
+            trackers = self.trackers_map[cls]
+            trks = np.zeros((len(trackers), 3))
+            to_del = []
+            for t, trk in enumerate(trks):
+                pos = trackers[t].predict()[0]
+                trk[:] = [pos[0], pos[1], pos[2]]
+                if np.any(np.isnan(pos)):
+                    to_del.append(t)
+            trks = np.ma.compress_rows(np.ma.masked_invalid(trks))
+            for t in reversed(to_del):
+                trackers.pop(t)
+                
+            points = observers[ids]
+            matched_points, unmatched_points, unmatched_trks = associate_points_to_trackers(
+                points[:, :3], trks, self.distance_threshold)
+
+            # update matched_points trackers with assigned points
+            for m in matched_points:
+                trackers[m[1]].update(points[m[0], :3])
+                trk = trackers[m[1]]
+                ret[ids[m[0]]] = np.concatenate(
+                        (trk.get_state()[0], [cls, trk.id+1]),axis=0).reshape(1, -1)
+
+            # create and initialise new trackers for unmatched points
+            for i in unmatched_points:
+                trk = KalmanPointTracker(points[i, :])
+                trackers.append(trk)
+                ret[ids[i]] = np.concatenate((points[i, :3], [cls, trk.id+1]),axis=0).reshape(1, -1)
+
+            # update unmatched trackers
+            for i in unmatched_trks:
+                trackers[i].predict()
+                if (trk.time_since_update > self.max_age):
+                    trackers.remove(trk)
+
+            self.trackers_map[cls] = trackers
+
+        # 不在观测范围内的tracker预测
+        for cls in self.trackers_map.keys():
+            if cls not in points_map.keys():
+                for idx, _ in enumerate(self.trackers_map[cls]):
+                    # remove dead tracklet
+                    self.trackers_map[cls][idx].predict()
+                    if (trk.time_since_update > self.max_age):
+                        self.trackers_map[cls].remove(_)
 
         if (len(ret) > 0):
-            return np.concatenate(ret)
-        return np.empty((0, 4))
+            return ret
+        return np.empty((0, 5))
 
 
 def noise(points, noise_level=0.5):
@@ -157,64 +182,3 @@ def plot(points, ax, title="", colors=[]):
     ax.set_title(title)
     for i in xyzt:
         ax.scatter(i[0], i[1], color=colors[int(i[3])])
-
-
-if __name__ == '__main__':
-    from tqdm import tqdm
-
-    # Create tracker
-    tracker = Sort(5, 3, 5)
-
-    # Create points
-    op = []
-    gt = []
-    observer = []
-    for i in range(100):
-        a = np.array([i, 100-i,  0, 1])
-        b = np.array([i, 70,  0, 2])
-        c = np.array([i, i-30,  0, 3])
-        
-        if i <= 30:
-            gt.append([a.copy(), b.copy()])
-        else:
-            gt.append([a.copy(), b.copy(), c.copy()])
-
-        a[:3] = noise(a[:3])
-        b[:3] = noise(b[:3])
-        c[:3] = noise(c[:3])
-
-        if i <= 20:
-            observer.append([a, b])
-        elif 20 < i <= 30:
-            observer.append([b])
-        elif 30 < i <= 50:
-            observer.append([a, b, c])
-        elif 50 < i <= 55:
-            observer.append([a, c])
-        elif 55 < i <= 60:
-            observer.append([a])
-        elif 60 < i <= 65:
-            observer.append([a, b])
-        else:
-            observer.append([a, b, c])
-
-    tracklets = []
-    # Track points
-    for i, frame_points in enumerate(tqdm(observer)):
-        # Track points
-        tracked_points = tracker.update(np.array(frame_points)[:, :3])
-        tracklets.append(tracked_points)
-
-    fig, (gt_plt, observer_plt, track_plt) = plt.subplots(3, 1, figsize=(8, 12))
-
-    colors = ['r', 'g', 'b', 'y', 'c', 'm', 'k', 'w']
-
-    plot(gt, gt_plt, title="Ground Truth", colors=colors)
-
-    plot(observer, observer_plt, title="Observer", colors=colors)
-
-    plot(tracklets, track_plt, title="Tracklets", colors=colors)
-    # observer.scatter(xy[:,0],xy[:,1], label='observer')
-
-    # fig.show()
-    fig.savefig("sort.png")

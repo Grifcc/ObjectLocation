@@ -2,7 +2,7 @@ global:
     bbox_type: &bbox_type "xywh"
     map_path: &map_path "data/map/JiuLongLake_v1223/mesh.obj"
     offset: &offset "data/map/JiuLongLake_v1223/offset.txt"
-    time_slice: &time_slice 100
+    time_slice: &time_slice 10
     enable_reloaction: &enable_reloaction False
     order: &order "rzyx"
 
@@ -13,12 +13,12 @@ pipeline:
   #     file_path: "simulated_data/simulate_data.json"
   #     bbox_type: "cxcywh"
 
-  stage1:
-    name: "MQTTJsonSource"
-    args:
-        offset: *offset
-        bbox_type: *bbox_type
-        file_path: "data/1703252135_TH7923461373.json"
+  # stage1:
+  #   name: "MQTTLogSource"
+  #   args:
+  #       offset: *offset
+  #       bbox_type: *bbox_type
+  #       file_path: "log_sqr\\20231226_16h13m59s_80.log"
 
   # stage1:
   #   name:  "UDPSource"
@@ -26,25 +26,19 @@ pipeline:
   #       ip: "127.0.0.1"
   #       port: 8888
 
-  # stage1:
-  #   name:  "MQTTSource"
-  #   args:
-  #       offset: *offset
-  #       bbox_type: *bbox_type
-  #       broker_url: "192.168.31.210"
-  #       port: 1883
-  #       client_id: 'sub_camera_param'
-  #       qos: 2
-  #       topic_uav_sn: "thing/product/sn"
-  #       timeout: 30
+  stage1:
+    name:  "MQTTSource"
+    args:
+        offset: *offset
+        bbox_type: *bbox_type
+        broker_url: "192.168.31.210"
+        port: 1883
+        client_id: 'test_camera_param'
+        qos: 2
+        topic_uav_sn: "thing/product/sn"
+        timeout: 30
 
   stage2:
-    name: "TimeFilter"
-    args:
-      time_slice: *time_slice
-      max_queue_length: null
-
-  stage3:
     name: "EstiPosition"
     args:
       map_path: *map_path
@@ -53,7 +47,21 @@ pipeline:
       enable_reloaction: *enable_reloaction
       max_queue_length: null
 
+  stage3:
+    name: "MOTracker"
+    args:
+      max_age: 10
+      min_hits: 4
+      distance_threshold: 4
+      max_queue_length: null
+
   stage4:
+    name: "TimeFilter"
+    args:
+      time_slice: *time_slice
+      max_queue_length: null
+
+  stage5:
     name: "SpatialFilter"
     args:
       time_slice: *time_slice
@@ -61,21 +69,21 @@ pipeline:
       max_map: 10
       max_queue_length: null
 
-  # stage5:
+  # stage6:
   #   name:  "UnitySink"
   #   args:
   #       ip:   "127.0.0.1"
   #       port_file: "../port.txt"
   #       max_retries: 5
 
-  # stage5:
+  # stage6:
   #   name:  "HttpSink"
   #   args:
   #      url: "http://192.168.31.31:8888/jk-ivas/non/controller/postTarPos.do"
   #      offset: *offset
   #      max_retries: 5
 
-  stage5:
+  stage6:
     name: "PrintSink"
     args:
       time_freq: 10

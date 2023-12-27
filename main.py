@@ -5,9 +5,10 @@ import os
 from framework.pipeline import Pipeline
 import signal
 
-from modules import JsonSource, UDPSource, MQTTSource,MQTTJsonSource
-from modules import TimeFilter
+from modules import JsonSource, UDPSource, MQTTSource,MQTTLogSource
 from modules import EstiPosition
+from modules import MOTracker
+from modules import TimeFilter
 from modules import SpatialFilter
 from modules import UnitySink, PrintSink, HttpSink
 
