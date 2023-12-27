@@ -1,8 +1,7 @@
 import numpy as np
-import scipy
 from scipy.spatial.distance import cdist
 from .KalmanFilter import KalmanPointTracker
-import matplotlib.pyplot as plt
+
 
 
 def linear_assignment(cost_matrix):

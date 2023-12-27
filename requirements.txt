@@ -13,6 +13,8 @@ tqdm
 pyyaml
 paho-mqtt
 utm
+scipy
+lap
 
 #mesh-raycast
 git+https://github.com/szabolcsdombi/python-mesh-raycast.git
