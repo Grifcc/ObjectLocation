@@ -1,5 +1,4 @@
 from paho.mqtt import client
-from queue import Queue
 from .record_log import Log
 import time
 import json
@@ -25,7 +24,7 @@ class MqttClient:
 
         self.topic_map = {}  # key: sn  value: topic
 
-        self.buffer = Queue()
+        self.buffer = []
 
         self.log: Log = log
 
@@ -68,8 +67,7 @@ class MqttClient:
 
         elif msg.topic in self.topic_map.values():
             data = eval(msg.payload.decode())
-            self.buffer.put_nowait(data)
-            # log
+            self.buffer.append(data)
             self.log.record(json.dumps(data))
 
     def publish(self, topic, payload):
@@ -89,7 +87,9 @@ class MqttClient:
         raise TimeoutError("Max retries exceeded")
 
     def get_data(self):
-        return self.buffer.get() if self.buffer.empty() else None
+        while len(self.buffer) == 0:
+            time.sleep(0.1)
+        return self.buffer.pop(0)
 
     def close(self):
         self.client.loop_stop()
