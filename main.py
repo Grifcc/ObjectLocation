@@ -24,7 +24,7 @@ if __name__ == "__main__":
     except:
         print(f"---Using default config {defualt_cfg}---")
 
-    with open(defualt_cfg, 'r') as yaml_file:
+    with open(defualt_cfg, 'r',encoding="utf-8") as yaml_file:
         config = yaml.safe_load(yaml_file)
 
     pipelines = []

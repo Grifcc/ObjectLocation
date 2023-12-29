@@ -1,48 +1,37 @@
+# 默认配置文件，部分参数可以修改，但注意是否正确，否则报错
 global:
-    bbox_type: &bbox_type "xywh"
-    map_path: &map_path "data/map/JiuLongLake_v1223/mesh.obj"
-    offset: &offset "data/map/JiuLongLake_v1223/offset.txt"
-    time_slice: &time_slice 10
-    enable_reloaction: &enable_reloaction False
-    order: &order "rzyx"
+  bbox_type: &bbox_type "xywh"
+  map_path: &map_path "data/map/JiuLongLake_v1223/mesh.obj" #可更换地图
+  offset: &offset "data/map/JiuLongLake_v1223/offset.txt" #随地图变化,很重要
+  time_slice: &time_slice 1 # 时间线融合, 可以调整, 单位ms
+  enable_reloaction: &enable_reloaction False # 默认，不可修改
+  order: &order "rzyx" # 固定参数
 
 pipeline:
-  # stage1:
-  #   name: "JsonSource"
-  #   args:
-  #     file_path: "simulated_data/simulate_data.json"
-  #     bbox_type: "cxcywh"
+  stage1:
+    name: "MQTTSource"
+    args:
+      offset: *offset
+      bbox_type: *bbox_type
+      broker_url: "192.168.31.210" # mqtt  服务器地址
+      port: 1883 #mqtt服务端口
+      client_id: "sub_camera_param" # 客户端ID，保证唯一
+      qos: 2 #服务质量
+      topic_uav_sn: "thing/product/sn" # sn订阅话题
+      timeout: 30 # mqtt连接超时限制
 
   # stage1:
   #   name: "MQTTLogSource"
   #   args:
   #       offset: *offset
   #       bbox_type: *bbox_type
-  #       file_path: "log_sqr\\20231226_16h13m59s_80.log"
-
-  # stage1:
-  #   name:  "UDPSource"
-  #   args:
-  #       ip: "127.0.0.1"
-  #       port: 8888
-
-  stage1:
-    name:  "MQTTSource"
-    args:
-        offset: *offset
-        bbox_type: *bbox_type
-        broker_url: "192.168.31.210"
-        port: 1883
-        client_id: 'test_camera_param'
-        qos: 2
-        topic_uav_sn: "thing/product/sn"
-        timeout: 30
+  #       file_path: "log/mqtt_source/20231227_13h46m00s.log"
 
   stage2:
     name: "EstiPosition"
     args:
       map_path: *map_path
-      default_height: 60
+      default_height: 60 #默认平面
       order: *order
       enable_reloaction: *enable_reloaction
       max_queue_length: null
@@ -50,9 +39,9 @@ pipeline:
   stage3:
     name: "MOTracker"
     args:
-      max_age: 10
-      min_hits: 4
-      distance_threshold: 4
+      max_age: 10 # 遗忘时间
+      min_hits: 4 # 最小匹配次数
+      distance_threshold: 4 # 距离阈值
       max_queue_length: null
 
   stage4:
@@ -65,26 +54,20 @@ pipeline:
     name: "SpatialFilter"
     args:
       time_slice: *time_slice
-      distance_threshold: 10.0
-      max_map: 10
+      distance_threshold: 10.0 #多机融合距离阈值，两个目标不可以长时间在这个距离内相
+      max_map: 100
       max_queue_length: null
 
-  # stage6:
-  #   name:  "UnitySink"
-  #   args:
-  #       ip:   "127.0.0.1"
-  #       port_file: "../port.txt"
-  #       max_retries: 5
-
-  # stage6:
-  #   name:  "HttpSink"
-  #   args:
-  #      url: "http://192.168.31.31:8888/jk-ivas/non/controller/postTarPos.do"
-  #      offset: *offset
-  #      max_retries: 5
-
   stage6:
-    name: "PrintSink"
+    name: "HttpSink"
     args:
-      time_freq: 10
+      url: "http://192.168.31.210:8888/jk-ivas/non/controller/postTarPos.do" # 下游接口地址
       offset: *offset
+      max_retries: 5 # 错误重发次数
+
+
+  # stage6:
+  #   name: "PrintSink"
+  #   args:
+  #     time_freq: 10
+  #     offset: *offset

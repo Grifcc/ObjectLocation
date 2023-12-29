@@ -15,6 +15,7 @@ paho-mqtt
 utm
 scipy
 lap
+filterpy
 
 #mesh-raycast
 git+https://github.com/szabolcsdombi/python-mesh-raycast.git

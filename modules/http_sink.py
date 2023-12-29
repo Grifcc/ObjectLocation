@@ -20,18 +20,20 @@ class HttpSink(Sink):
         # 对齐操作
         pass
 
-    def process(self, data: Package):
+    def process(self, data: list[Package]):
         retry_count = 0
         send_data = {}
-        send_data["timestamp"] = data.time
-        send_data["obj_cnt"] = 1
-        if self.convert:
-            data.location = self.convert.U2W(data.location)
-        send_data["objs"] = [{"id": data.global_id, "cls": data.class_id,
-                              "gis": data.location, "bbox": data.norm_Bbox,
-                              "obj_img": f"http://192.168.31.210:9002/detect/{data.obj_img}.jpg" if data.obj_img else "null"}]
-        if send_data["objs"][0]["obj_img"] != "null":
-            print("\033[92m"+send_data["objs"][0]["obj_img"]+"\033[0m")
+        send_data["timestamp"] = data[0].time
+        send_data["obj_cnt"] = len(data)
+        send_data["objs"] = []
+
+        for obj in data:
+            if self.convert:
+                
+                obj.location = self.convert.U2W(obj.location)
+            send_data["objs"].append({"id": obj.global_id, "cls": obj.class_id,
+                                      "gis": obj.location, "bbox": obj.norm_Bbox,
+                                      "obj_img": f"http://192.168.31.210:9002/detect/{obj.obj_img}.jpg" if obj.obj_img else "null"})
 
         send_data = json.dumps(send_data)
 
@@ -39,6 +41,7 @@ class HttpSink(Sink):
             response = requests.post(
                 self.url, data=send_data, headers=self.header)
             if response.status_code == 200 and eval(response.text)["resCode"] == 1:
+                print(f"\033[92mHttp:{data[0].time}  {len(data)}\033[0m")
                 return
             else:
                 retry_count += 1

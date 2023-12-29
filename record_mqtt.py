@@ -38,15 +38,15 @@ client = MqttClient(broker_url=broker_url,
 client.start()
 
 
-# def signal_handler(signum, frame):
-#     print(
-#         "Ctrl+C detected. Closing socket. Exiting...")
-#     client.close()
+def signal_handler(signum, frame):
+    print(
+        "Ctrl+C detected. Closing socket. Exiting...")
+    client.close()
 
-#     exit()
+    exit()
 
 
-# signal.signal(signal.SIGINT, signal_handler)
+signal.signal(signal.SIGINT, signal_handler)
 
 while True:
     client.get_data()

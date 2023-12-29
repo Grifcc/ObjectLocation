@@ -18,7 +18,7 @@ class MQTTSource(Source):
                  topic_uav_sn="thing/product/sn",
                  timeout=30):
         super().__init__("mqtt_source")
-        my_log = Log(LOG_ROOT, enable=True, eveytime=False)
+        my_log = Log(LOG_ROOT, enable=False, eveytime=False)
         
         def print_writeonce(msg):
             data = json.loads(msg)
@@ -54,8 +54,9 @@ class MQTTSource(Source):
         # 停止客户端订阅
         self.client.close()
 
-    def process(self, packages: list[Package]):
+    def process(self):
         objs = self.client.get_data()
-        package = self.parse_msg.parse_msg(objs)
-        packages.extend(package)
-        return True
+        if objs is None:
+            return []
+        packages = self.parse_msg.parse_msg(objs)
+        return packages
