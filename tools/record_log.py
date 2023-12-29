@@ -5,6 +5,8 @@ import time
 class Log:
     def __init__(self, log_path, log_name=None, eveytime=True, enable=True):
         self.enable = enable
+        self.log_print = None  # function  args = (content, key ,end="\n")
+        
         if not self.enable:
             return
         self.log_path = log_path
@@ -21,14 +23,13 @@ class Log:
         if not eveytime:
             self.f = open(self.log_file, "a+", encoding="utf-8")
 
-        self.log_print = None  # function  args = (content, key ,end="\n")
-
+    
     def record(self, content):
-        if not self.enable:
-            return
         if self.log_print is not None:
             self.log_print(content)
-
+            
+        if not self.enable:
+            return
         if self.eveytime:
             with open(self.log_file, "a") as f:
                 f.write(content+"\n")

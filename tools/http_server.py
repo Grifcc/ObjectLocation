@@ -3,6 +3,8 @@ import socketserver
 import json
 
 
+cnt = 0
+
 class MyRequestHandler(http.server.BaseHTTPRequestHandler):
     def do_POST(self):
         if self.path == '/jk-ivas/non/controller/postTarPos.do':
@@ -30,7 +32,8 @@ class MyRequestHandler(http.server.BaseHTTPRequestHandler):
                 self.send_response(200)
                 self.send_header('Content-type', 'text/html')
                 self.end_headers()
-                self.wfile.write(b'Success')
+                self.wfile.write(b'{"resCode":1,"resMsg":"success"}')
+                
             except json.JSONDecodeError:
                 # JSON 解析错误
                 self.send_response(400)
@@ -45,8 +48,14 @@ class MyRequestHandler(http.server.BaseHTTPRequestHandler):
             self.wfile.write(b'404 Not Found')
 
     def parse_json(self, data):
-        print(data)
-
+        global cnt
+        if "clear" in  data:
+            cnt = 0
+            print("clear cnt")
+            return 
+        cnt += 1
+        print("cnt:", cnt)
+        
 
 if __name__ == '__main__':
     PORT = 8888
