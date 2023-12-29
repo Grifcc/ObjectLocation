@@ -21,16 +21,22 @@ class PrintSink(Sink):
         # 对齐操作
         pass
 
-    def process(self, data: Package):
+    def process(self, data: list[Package]):
 
         send_data = {}
-        send_data["time"] = data.time
-        send_data["obj_cnt"] = 1
-        if self.convert:
-            data.location = self.convert.U2W(data.location)
-        send_data["objs"] = [{"id": data.global_id, "tr_id": data.tracker_id,  "cls": data.class_id,
-                              "gis": data.location, "uav_pos": data.uav_wgs,  "bbox": data.norm_Bbox, 
-                              "obj_img": f"{data.obj_img}.jpg" if data.obj_img else "null"}]
+        send_data["timestamp"] = data[0].time
+        send_data["obj_cnt"] = len(data)
+        send_data["objs"] = []
+
+        print(f"convert start {time.time()}:")
+        for obj in data:
+            if self.convert:
+                
+                obj.location = self.convert.U2W(obj.location)
+            send_data["objs"].append({"id": obj.global_id, "cls": obj.class_id,
+                                      "gis": obj.location, "bbox": obj.norm_Bbox,
+                                      "obj_img": f"http://192.168.31.210:9002/detect/{obj.obj_img}.jpg" if obj.obj_img else "null"})
+        print(f"convert finished {time.time()}:")
         self.buffer.append(send_data)
 
         now_time = int(time.time() * 1000)

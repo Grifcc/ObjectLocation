@@ -69,22 +69,23 @@ class UnitySink(Sink):
         except:
             return False
 
-    def process(self, data: Package):
+    def process(self, data: list[Package]):
         # assert self.is_socket_connected(), "Socket 连接错误"
         retry_count = 0
-        send_data = copy.deepcopy(self.data_tem)
-        send_data["ids"] = data.global_id
-        send_data["x"] = float(data.location[0])
-        send_data["y"] = float(data.location[1])
-        send_data["z"] = float(data.location[2])
-        send_str = json.dumps(send_data)
-        while retry_count < self.max_retries:
-            if not self.send_data(send_str):
-                retry_count += 1
-                time.sleep(0.01)
-            else:
-                retry_count = 0
-                print(send_str)
-                return
+        for obj in data:
+            send_data = copy.deepcopy(self.data_tem)
+            send_data["ids"] = obj.global_id
+            send_data["x"] = float(obj.location[0])
+            send_data["y"] = float(obj.location[1])
+            send_data["z"] = float(obj.location[2])
+            send_str = json.dumps(send_data)
+            while retry_count < self.max_retries:
+                if not self.send_data(send_str):
+                    retry_count += 1
+                    time.sleep(0.01)
+                else:
+                    retry_count = 0
+                    print(send_str)
+                    return
         self.close()
         raise TimeoutError("Max retries exceeded")
