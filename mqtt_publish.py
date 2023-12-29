@@ -1,7 +1,7 @@
 from tools import MqttClient, Log
 import signal
 import json
-
+import time
 
 LOG_ROOT = "./log"
 
@@ -13,18 +13,9 @@ topic_uav_sn = "thing/product/sn"
 timeout = 30
 
 
-my_log = Log(LOG_ROOT, enable=True, eveytime=True)
+def topic_uav_msg(sn):
+    return f"thing/product/{sn}/target_state"
 
-
-def print_writeonce(msg):
-    print(msg)
-
-def print_writevertime(msg):
-    data = json.loads(msg)
-    print(data["time"], data["obj_cnt"])
-
-
-my_log.log_show(print_writevertime)
 
 # 创建MQTT客户端实例,不记录日志
 client = MqttClient(broker_url=broker_url,
@@ -32,8 +23,7 @@ client = MqttClient(broker_url=broker_url,
                     client_id=client_id,
                     qos=qos,
                     topic_uav_sn=topic_uav_sn,
-                    timeout=timeout,
-                    log=my_log)
+                    timeout=timeout)
 
 client.start()
 
@@ -48,5 +38,11 @@ def signal_handler(signum, frame):
 
 signal.signal(signal.SIGINT, signal_handler)
 
-while True:
-    client.get_data()
+
+log_path = "log_sqr/20231226_16h19m31s_150.log"
+with open(log_path, "r") as f:
+    json_data =[json.loads(line) for line in f.readlines()]
+    
+for data in json_data:
+    client.publish(topic_uav_msg(data["uav_id"]), json.dumps(data))
+    time.sleep(0.1)

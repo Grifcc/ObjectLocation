@@ -72,6 +72,9 @@ class MqttClient:
             # log
             self.log.record(json.dumps(data))
 
+    def publish(self, topic, payload):
+        self.client.publish(topic, payload, qos=self.qos)
+
     def start(self):
         times_count = 0
         while times_count < self.timeout:
