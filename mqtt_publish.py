@@ -41,21 +41,21 @@ signal.signal(signal.SIGINT, signal_handler)
 
 log_path = "log_sqr/20231226_16h19m31s_150.log"
 with open(log_path, "r") as f:
-    json_data =[json.loads(line) for line in f.readlines()]
-    
-    
+    json_data = [json.loads(line) for line in f.readlines()]
+
+
 sn_list = []
 
 for data in json_data:
     if data["uav_id"] not in sn_list:
         sn_list.append(data["uav_id"])
-        client.publish(topic_uav_sn,json.dumps({"sn":data["uav_id"]}))
+        client.publish(topic_uav_sn, json.dumps({"sn": data["uav_id"]}))
         print(f"MQTT: publish {topic_uav_sn} success!")
         time.sleep(0.1)
 
 time.sleep(5)
 
-for data in json_data:        
+for data in json_data:
     client.publish(topic_uav_msg(data["uav_id"]), json.dumps(data))
     time.sleep(0.1)
 
