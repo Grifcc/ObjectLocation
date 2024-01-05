@@ -29,7 +29,7 @@ class MOTracker(Tracker):
         for uav_id,packages in point_map.items():
             points = []
             for p in packages:
-                points.append([*p.location, p.class_id])
+                points.append([*p.uav_utm, p.class_id])
             points = np.array(points).reshape(-1, 4)
             ret = self.tracker[uav_id].update(points)
             for i, t in enumerate(ret):

@@ -5,7 +5,7 @@ import os
 from framework.pipeline import Pipeline
 import signal
 
-from modules import JsonSource, UDPSource, MQTTSource,MQTTLogSource
+from modules import JsonSource, UDPSource, MQTTSource, MQTTLogSource
 from modules import EstiPosition
 from modules import MOTracker
 from modules import TimeFilter
@@ -24,14 +24,14 @@ if __name__ == "__main__":
     except:
         print(f"---Using default config {defualt_cfg}---")
 
-    with open(defualt_cfg, 'r',encoding="utf-8") as yaml_file:
+    with open(defualt_cfg, 'r', encoding="utf-8") as yaml_file:
         config = yaml.safe_load(yaml_file)
 
     pipelines = []
     for stage in config["pipeline"].values():
         module = eval(stage["name"])
-        pipelines.append(
-            module(*stage["args"].values()) if stage["args"] else module())
+        pipelines.append([
+            module(*stage["args"].values()) if stage["args"] else module() for _ in range(config["global"]["stage_num"][stage["idx"]-1])])
 
     pipe = Pipeline(pipelines)
     pipe.run()

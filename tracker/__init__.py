@@ -1,2 +1,2 @@
 from .Sort import Sort
-from .KalmanFilter import KalmanFilter
+from .KalmanFilter import KalmanPointTracker

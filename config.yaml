@@ -3,17 +3,19 @@ global:
   bbox_type: &bbox_type "xywh"
   map_path: &map_path "data/map/JiuLongLake_v1223/mesh.obj" #可更换地图
   offset: &offset "data/map/JiuLongLake_v1223/offset.txt" #随地图变化,很重要
-  time_slice: &time_slice 1 # 时间线融合, 可以调整, 单位ms
+  time_slice: &time_slice 1000 # 时间线融合, 可以调整, 单位ms
   enable_reloaction: &enable_reloaction False # 默认，不可修改
   order: &order "rzyx" # 固定参数
+  stage_num: [1, 1, 1, 5, 1, 1] # 固定参数
 
 pipeline:
   stage1:
+    idx: 1
     name: "MQTTSource"
     args:
       offset: *offset
       bbox_type: *bbox_type
-      broker_url: "192.168.31.210" # mqtt  服务器地址
+      broker_url: "127.0.0.1" # mqtt  服务器地址
       port: 1883 #mqtt服务端口
       client_id: "sub_camera_param" # 客户端ID，保证唯一
       qos: 2 #服务质量
@@ -21,6 +23,7 @@ pipeline:
       timeout: 30 # mqtt连接超时限制
 
   # stage1:
+  #   idx: 1
   #   name: "MQTTLogSource"
   #   args:
   #       offset: *offset
@@ -28,6 +31,23 @@ pipeline:
   #       file_path: "log/mqtt_source/20231227_13h46m00s.log"
 
   stage2:
+    idx: 2
+    name: "MOTracker"
+    args:
+      max_age: 10 # 遗忘时间
+      min_hits: 4 # 最小匹配次数
+      distance_threshold: 4 # 距离阈值
+      max_queue_length: null
+
+  stage3:
+    idx: 3
+    name: "TimeFilter"
+    args:
+      time_slice: *time_slice
+      max_queue_length: null
+
+  stage4:
+    idx: 4
     name: "EstiPosition"
     args:
       map_path: *map_path
@@ -36,21 +56,8 @@ pipeline:
       enable_reloaction: *enable_reloaction
       max_queue_length: null
 
-  stage3:
-    name: "MOTracker"
-    args:
-      max_age: 10 # 遗忘时间
-      min_hits: 4 # 最小匹配次数
-      distance_threshold: 4 # 距离阈值
-      max_queue_length: null
-
-  stage4:
-    name: "TimeFilter"
-    args:
-      time_slice: *time_slice
-      max_queue_length: null
-
   stage5:
+    idx: 5
     name: "SpatialFilter"
     args:
       time_slice: *time_slice
@@ -59,14 +66,16 @@ pipeline:
       max_queue_length: null
 
   stage6:
+    idx: 6
     name: "HttpSink"
     args:
-      url: "http://192.168.31.210:8888/jk-ivas/non/controller/postTarPos.do" # 下游接口地址
+      url: "http://127.0.0.1:8888/jk-ivas/non/controller/postTarPos.do" # 下游接口地址
       offset: *offset
       max_retries: 5 # 错误重发次数
 
 
   # stage6:
+  #   idx: 6
   #   name: "PrintSink"
   #   args:
   #     time_freq: 10

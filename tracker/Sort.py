@@ -1,18 +1,12 @@
 import numpy as np
 from scipy.spatial.distance import cdist
 from .KalmanFilter import KalmanPointTracker
-
+import lap
 
 
 def linear_assignment(cost_matrix):
-    try:
-        import lap
-        _, x, y = lap.lapjv(cost_matrix, extend_cost=True)
-        return np.array([[y[i], i] for i in x if i >= 0])
-    except ImportError:
-        from scipy.optimize import linear_sum_assignment
-        x, y = linear_sum_assignment(cost_matrix)
-        return np.array(list(zip(x, y)))
+    _, x, y = lap.lapjv(cost_matrix, extend_cost=True)
+    return np.array([[y[i], i] for i in x if i >= 0])
 
 
 def distance_mat(points1, points2):
@@ -122,7 +116,7 @@ class Sort(object):
             trks = np.ma.compress_rows(np.ma.masked_invalid(trks))
             for t in reversed(to_del):
                 trackers.pop(t)
-                
+
             points = observers[ids]
             matched_points, unmatched_points, unmatched_trks = associate_points_to_trackers(
                 points[:, :3], trks, self.distance_threshold)
@@ -132,13 +126,14 @@ class Sort(object):
                 trackers[m[1]].update(points[m[0], :3])
                 trk = trackers[m[1]]
                 ret[ids[m[0]]] = np.concatenate(
-                        (trk.get_state()[0], [cls, trk.id+1]),axis=0).reshape(1, -1)
+                    (trk.get_state()[0], [cls, trk.id+1]), axis=0).reshape(1, -1)
 
             # create and initialise new trackers for unmatched points
             for i in unmatched_points:
                 trk = KalmanPointTracker(points[i, :])
                 trackers.append(trk)
-                ret[ids[i]] = np.concatenate((points[i, :3], [cls, trk.id+1]),axis=0).reshape(1, -1)
+                ret[ids[i]] = np.concatenate(
+                    (points[i, :3], [cls, trk.id+1]), axis=0).reshape(1, -1)
 
             # update unmatched trackers
             for i in unmatched_trks:
@@ -154,7 +149,7 @@ class Sort(object):
                 for idx, _ in enumerate(self.trackers_map[cls]):
                     # remove dead tracklet
                     self.trackers_map[cls][idx].predict()
-                    if (trk.time_since_update > self.max_age):
+                    if (self.trackers_map[cls][idx].time_since_update > self.max_age):
                         self.trackers_map[cls].remove(_)
 
         if (len(ret) > 0):
