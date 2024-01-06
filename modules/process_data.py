@@ -33,7 +33,6 @@ class Process_data(Module):
                 time.sleep(0.1)
             
             q_out.put(packages)
-            print("q_out size:", q_out.qsize())
 
     def process(self) -> list[Package]:
 
@@ -44,18 +43,10 @@ class Process_data(Module):
         if len(packages) == 0:
             return []
 
-        t0 = time.time()
         s1_data = self.stage1.process(packages)
-        t1 = time.time()
-        print("stage1 time:", t1 - t0)
-        
-        
+    
         for idx, data in enumerate(s1_data):
             self.stage2.process(s1_data[idx])
-        t2 = time.time()
-        print("stage2 time:", t2 - t1)
         
         s3_data = self.stage3.process(s1_data)
-        t3 = time.time()
-        print("stage3 time:", t3 - t2)
         return s3_data

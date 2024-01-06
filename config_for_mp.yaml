@@ -3,7 +3,7 @@ global:
   bbox_type: &bbox_type "xywh"
   map_path: &map_path "data/map/JiuLongLake_v1223/mesh.obj" #可更换地图
   offset: &offset "data/map/JiuLongLake_v1223/offset.txt" #随地图变化,很重要
-  time_slice: &time_slice 1000 # 时间线融合, 可以调整, 单位ms
+  time_slice: &time_slice 1 # 时间线融合, 可以调整, 单位ms
   enable_reloaction: &enable_reloaction False # 默认，不可修改
   order: &order "rzyx" # 固定参数
   stage_num: [1, 1, 1, 1] # 固定参数
@@ -42,7 +42,7 @@ pipeline:
     args:
       offset: *offset
       bbox_type: *bbox_type
-      broker_url: "127.0.0.1" # mqtt  服务器地址
+      broker_url: "192.168.31.210" # mqtt  服务器地址
       port: 1883 #mqtt服务端口
       client_id: "sub_camera_param" # 客户端ID，保证唯一
       qos: 2 #服务质量
@@ -68,7 +68,7 @@ pipeline:
     idx: 4
     name: "HttpSink"
     args:
-      url: "http://127.0.0.1:9999/jk-ivas/non/controller/postTarPos.do" # 下游接口地址
+      url: "http://192.168.31.31:8888/jk-ivas/non/controller/postTarPos.do" # 下游接口地址
       offset: *offset
       max_retries: 5 # 错误重发次数
 

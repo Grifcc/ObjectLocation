@@ -1,4 +1,4 @@
-from framework import Package
+from framework import Package,TimePriorityQueue
 from framework import Sink
 import requests
 import time
@@ -13,6 +13,7 @@ class HttpSink(Sink):
         self.url = url
         self.max_retries = max_retries
         self.header = {"content-type": "application/json"}
+        self.process_queue = TimePriorityQueue()
         self.convert = None
         if offset:
             self.convert = UWConvert(offset)
@@ -58,12 +59,11 @@ class HttpSink(Sink):
             data = q_in.get()
             if len(data) == 0:
                 continue
-            same_time_data = []
             for package in data:
-                if same_time_data == []:
-                    same_time_data = [package]
-                elif package.time != same_time_data[0].time:
-                    self.process(same_time_data)
-                    same_time_data = []
-
-                same_time_data.append(package)
+                self.process_queue.push(package)
+            
+            if self.process_queue.is_empty() or self.process_queue.delta_time() < 1:
+                continue
+            packages = self.process_queue.get_time_slice(0)
+            self.process(packages)
+            
