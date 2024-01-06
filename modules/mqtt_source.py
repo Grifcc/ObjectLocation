@@ -4,6 +4,7 @@ import numpy as np
 from tools import Log, MqttClient, ParseMsg
 import json
 
+from multiprocessing import Queue
 
 LOG_ROOT = "./log/mqtt_source"
 
@@ -19,16 +20,9 @@ class MQTTSource(Source):
                  timeout=30):
         super().__init__("mqtt_source")
         my_log = Log(LOG_ROOT, enable=False, eveytime=False)
-        
-        def print_writeonce(msg):
-            data = json.loads(msg)
-            # 打印黄色
-            print("\033[35mMQTT: ", data["time"], data["obj_cnt"], "\033[0m")
-            for obj in data["objs"]:
-                if obj["pic"] != "None":
-                    print("\033[32mMQTT: ", obj["pic"], ".jpg\033[0m")
-        my_log.log_show(print_writeonce)   
-            
+
+        my_log.log_show(self.print_writeonce)
+
         # 创建MQTT客户端实例,不记录日志
         self.client = MqttClient(broker_url=broker_url,
                                  port=port,
@@ -50,6 +44,14 @@ class MQTTSource(Source):
 
         self.parse_msg = ParseMsg(offset, bbox_type)
 
+    def print_writeonce(self, msg):
+        data = json.loads(msg)
+        # 打印黄色
+        print("\033[35mMQTT: ", data["time"], data["obj_cnt"], "\033[0m")
+        for obj in data["objs"]:
+            if obj["pic"] != "None":
+                print("\033[32mMQTT: ", obj["pic"], ".jpg\033[0m")
+
     def close(self):
         # 停止客户端订阅
         self.client.close()
@@ -60,3 +62,9 @@ class MQTTSource(Source):
             return []
         packages = self.parse_msg.parse_msg(objs)
         return packages
+
+    def run_by_process(self,q_out: Queue):
+        while True:
+            packages = self.process()
+            if packages != []:
+                q_out.put(packages)

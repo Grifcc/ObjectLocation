@@ -1,0 +1,74 @@
+# 默认配置文件，部分参数可以修改，但注意是否正确，否则报错
+global:
+  bbox_type: &bbox_type "xywh"
+  map_path: &map_path "data/map/JiuLongLake_v1223/mesh.obj" #可更换地图
+  offset: &offset "data/map/JiuLongLake_v1223/offset.txt" #随地图变化,很重要
+  time_slice: &time_slice 1000 # 时间线融合, 可以调整, 单位ms
+  enable_reloaction: &enable_reloaction False # 默认，不可修改
+  order: &order "rzyx" # 固定参数
+  stage_num: [1, 1, 1, 1] # 固定参数
+
+sub_stages:
+  stage1:
+    idx: 1
+    name: "TimeFilter"
+    args: &s1_params
+      time_slice: *time_slice
+      max_queue_length: null
+
+  stage2:
+    idx: 2
+    name: "EstiPosition"
+    args: &s2_params
+      map_path: *map_path
+      default_height: 60 #默认平面
+      order: *order
+      enable_reloaction: *enable_reloaction
+      max_queue_length: null
+
+  stage3:
+    idx: 3
+    name: "SpatialFilter"
+    args: &s3_params
+      time_slice: *time_slice
+      distance_threshold: 10.0 #多机融合距离阈值，两个目标不可以长时间在这个距离内相
+      max_map: 100
+      max_queue_length: null
+
+pipeline:
+  stage1:
+    idx: 1
+    name: "MQTTSource"
+    args:
+      offset: *offset
+      bbox_type: *bbox_type
+      broker_url: "127.0.0.1" # mqtt  服务器地址
+      port: 1883 #mqtt服务端口
+      client_id: "sub_camera_param" # 客户端ID，保证唯一
+      qos: 2 #服务质量
+      topic_uav_sn: "thing/product/sn" # sn订阅话题
+      timeout: 30 # mqtt连接超时限制
+
+  stage2:
+    idx: 2
+    name: "MOTracker"
+    args:
+      max_age: 10 # 遗忘时间
+      min_hits: 4 # 最小匹配次数
+      distance_threshold: 4 # 距离阈值
+      max_queue_length: null
+
+  stage3:
+    idx: 3
+    name: "Process_data"
+    args:
+      params_dict: [*s1_params, *s2_params, *s3_params]
+
+  stage4:
+    idx: 4
+    name: "HttpSink"
+    args:
+      url: "http://127.0.0.1:9999/jk-ivas/non/controller/postTarPos.do" # 下游接口地址
+      offset: *offset
+      max_retries: 5 # 错误重发次数
+
