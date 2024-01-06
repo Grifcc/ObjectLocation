@@ -1,9 +1,7 @@
 from framework import Package
 from framework import Filter
 import numpy as np
-from .esti_position import EstiPosition
-from .motracker import MOTracker
-import time
+
 # global溯源表循环队列
 
 
@@ -69,10 +67,6 @@ class SpatialFilter(Filter):
         super().__init__("SpatialFilter", time_slice, max_queue_length)
         self.global_history = self.create_history(max_map)
         self.distance_threshold = distance_threshold  # 超参
-        self.esti_position = EstiPosition(mesh_path="data\map\JiulongLake_v1223\mesh.obj",
-                                          default_height=60, order="rzyx", enable=False, max_queue_length=None)
-        self.tracker = MOTracker(
-            max_age=10, min_hits=4, distance_threshold=4, max_queue_length=None)
 
     def create_history(self, max_number):
         global_history = CircularQueue(max_number)
@@ -163,8 +157,7 @@ class SpatialFilter(Filter):
         # 拉成一维
         detections_list = []
         for i in range(len(class_list)):
-            detections_list = detections_list + \
-                [item for sublist in class_list[i] for item in sublist]
+            detections_list = detections_list + [item for sublist in class_list[i] for item in sublist]
         # 这里与普通的字典不同，这里与原数据引用的是同一块，会同时改变
         grouped_detections = defaultdict(list)
         # 使用 defaultdict 初始化一个字典，键为 local_id，值为包含相同 local_id 的元素的列表
@@ -233,48 +226,9 @@ class SpatialFilter(Filter):
         return detections_list, global_queue
 
     def process(self, packages: list[Package]):
-
-        t0 = time.time()
-        return_data = []  # 需要返回的列表
-        same_time = []
-        for i in packages:
-            if same_time == []:
-                same_time.append(i)
-
-            elif i.time == same_time[0].time:
-                same_time.append(i)
-
-            elif i.time != same_time[0].time:
-                same_time = self.tracker.process(same_time)
-                return_data.extend(same_time[:])
-                same_time = []
-                same_time.append(i)
-        t1 = time.time()
-        print(f"tracker time:{t1-t0}")
-
-        packages = sorted(return_data, key=lambda x: x.time)
-        data_map = {}  # 用于存储数据的字典，按无人机id分类
-
-        for package in reversed(packages):
-
-            map_key = f"{package.uav_id}_{package.tracker_id}"
-            if map_key not in data_map.keys():
-                data_map[map_key] = package
-            else:
-                if data_map[map_key].time < package.time:
-                    if data_map[map_key].obj_img != None:
-                        package.obj_img = data_map[map_key].obj_img
-                    data_map[map_key] = package
-
-        return_data = []
-        for package in data_map.values():
-            package.location = self.esti_position.get_point_form_uav_object_point(
-                package)
-            return_data.append(package)
-
         # 拆解list，便于后续操作
-        class_list = self.classify_classid_uav(return_data)
-
+        class_list = self.classify_classid_uav(packages)
+        
         # 赋值local_id
         local_id = 0
         for i in range(len(class_list)):
