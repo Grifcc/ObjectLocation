@@ -7,15 +7,17 @@ import signal
 from multiprocessing import Queue
 
 
-from modules import MQTTSource
+from modules import JsonSource, UDPSource, MQTTSource, MQTTLogSource
+from modules import EstiPosition
 from modules import MOTracker
-from modules import Process_data
-from modules import HttpSink
+from modules import TimeFilter
+from modules import SpatialFilter
+from modules import UnitySink, PrintSink, HttpSink
 
 
 if __name__ == "__main__":
     # 读取YAML配置文件
-    defualt_cfg = "config_for_mp.yaml"
+    defualt_cfg = "config.yaml"
     try:
         if os.path.exists(sys.argv[1]):
             defualt_cfg = sys.argv[1]
@@ -31,21 +33,19 @@ if __name__ == "__main__":
     for stage in config["pipeline"].values():
         module = eval(stage["name"])
         pipelines.append([
-            module(*stage["args"].values()) if stage["args"] else module() for _ in range(config["global"]["stage_num"][stage["idx"]-1])])
+            module(*stage["args"].values()) if stage["args"] else module() for _ in range(stage["parallel"])])
 
     pipe = Pipeline_mp(pipelines)
-    
-    # def signal_handler(signum, frame):
-    #     print(
-    #         "Ctrl+C detected. Closing socket. Exiting...")
-    #     pipelines[0].close()
-    #     pipelines[-1].close()
-    #     for i in pipe.process_pool:
-    #         i.terminate()
-    #     exit()
 
-    # signal.signal(signal.SIGINT, signal_handler)
-    
+    def signal_handler(signum, frame):
+        print(
+            "Ctrl+C detected. Closing socket. Exiting...")
+        pipelines[0].close()
+        pipelines[-1].close()
+        for i in pipe.process_pool:
+            i.terminate()
+        exit()
+
+    signal.signal(signal.SIGINT, signal_handler)
+
     pipe.run()
-
-

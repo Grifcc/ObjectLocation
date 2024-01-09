@@ -3,6 +3,9 @@ from framework import Location
 import mesh_raycast
 from tools import get_ray, read_mesh, set_K, set_distortion_coeffs, set_camera_pose, UWConvert
 import numpy as np
+from multiprocessing import Queue
+import time
+
 
 class EstiPosition(Location):
     # enable  true:根据相机位姿定位目标点 false:根据道通uav_obj_pose重定位目标点
@@ -31,10 +34,10 @@ class EstiPosition(Location):
         else:
             return min(result, key=lambda x: x['distance'])[
                 'point']
-        
-    def get_point_form_uav_object_point(self, data: Package): 
-        p_camera = np.array(data.camera_pose[3:]).reshape(3,1)
-        p_obj = np.array([data.uav_utm]).reshape(3,1)
+
+    def get_point_form_uav_object_point(self, data: Package):
+        p_camera = np.array(data.camera_pose[3:]).reshape(3, 1)
+        p_obj = np.array([data.uav_utm]).reshape(3, 1)
         ray = p_obj - p_camera
         ray = ray / np.linalg.norm(ray)
         result = mesh_raycast.raycast(
@@ -48,7 +51,19 @@ class EstiPosition(Location):
             return min(result, key=lambda x: x['distance'])[
                 'point']
 
-
     def process(self, data: Package):
         data.location = self.get_point(
             data) if self.enable else self.get_point_form_uav_object_point(data)
+
+    def run_by_process(self, q_in: Queue, q_out: Queue):
+        while True:
+            if q_in.empty():
+                continue
+            data = q_in.get()
+
+            self.process(data)
+
+            while q_out.full():
+                time.sleep(0.1)
+                
+            q_out.put(data)

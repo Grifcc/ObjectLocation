@@ -31,7 +31,7 @@ if __name__ == "__main__":
     for stage in config["pipeline"].values():
         module = eval(stage["name"])
         pipelines.append([
-            module(*stage["args"].values()) if stage["args"] else module() for _ in range(config["global"]["stage_num"][stage["idx"]-1])])
+            module(*stage["args"].values()) if stage["args"] else module() for _ in range(stage["parallel"])])
 
     pipe = Pipeline(pipelines)
     pipe.run()

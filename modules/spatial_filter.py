@@ -1,10 +1,10 @@
-from framework import Package
+from framework import Package, TimePriorityQueue
 from framework import Filter
 import numpy as np
+from multiprocessing import Queue
+import time
 
 # global溯源表循环队列
-
-
 class CircularQueue:
     def __init__(self, capacity):
         self.capacity = capacity
@@ -67,6 +67,7 @@ class SpatialFilter(Filter):
         super().__init__("SpatialFilter", time_slice, max_queue_length)
         self.global_history = self.create_history(max_map)
         self.distance_threshold = distance_threshold  # 超参
+        self.process_queue = TimePriorityQueue()
 
     def create_history(self, max_number):
         global_history = CircularQueue(max_number)
@@ -157,7 +158,8 @@ class SpatialFilter(Filter):
         # 拉成一维
         detections_list = []
         for i in range(len(class_list)):
-            detections_list = detections_list + [item for sublist in class_list[i] for item in sublist]
+            detections_list = detections_list + \
+                [item for sublist in class_list[i] for item in sublist]
         # 这里与普通的字典不同，这里与原数据引用的是同一块，会同时改变
         grouped_detections = defaultdict(list)
         # 使用 defaultdict 初始化一个字典，键为 local_id，值为包含相同 local_id 的元素的列表
@@ -228,7 +230,7 @@ class SpatialFilter(Filter):
     def process(self, packages: list[Package]):
         # 拆解list，便于后续操作
         class_list = self.classify_classid_uav(packages)
-        
+
         # 赋值local_id
         local_id = 0
         for i in range(len(class_list)):
@@ -244,3 +246,18 @@ class SpatialFilter(Filter):
             group_list, self.global_history)
         # TODO: 滤波
         return return_data
+
+    def run_by_process(self, q_in: Queue, q_out: Queue):
+        while True:
+            if q_in.empty():
+                continue
+            data = q_in.get()
+
+            self.process_queue.push(data)
+            if self.process_queue.is_empty() or self.process_queue.delta_time() < self.time_slice + 1:
+                continue
+            packages = self.process_queue.get_time_slice(self.time_slice)
+            out_packages = self.process(packages)
+            while q_out.full():
+                time.sleep(0.1)
+            q_out.put(out_packages[:])

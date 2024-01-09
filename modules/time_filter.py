@@ -1,9 +1,14 @@
 from framework import Package
 from framework import PreProcess
+from multiprocessing import Queue
+from framework import TimePriorityQueue
+import time
+
 
 class TimeFilter(PreProcess):
     def __init__(self, time_slice, max_queue_length=None):
         super().__init__("TimeFilter", time_slice, max_queue_length)
+        self.process_queue = TimePriorityQueue()
 
     def process(self, data: list[Package]):
         return_data = []  # 需要返回的列表
@@ -15,11 +20,32 @@ class TimeFilter(PreProcess):
                 data_map[map_key] = package
             else:
                 if data_map[map_key].time < package.time:
-                    if  data_map[map_key].obj_img != None:
-                        package.obj_img =data_map[map_key].obj_img
+                    if data_map[map_key].obj_img != None:
+                        package.obj_img = data_map[map_key].obj_img
                     data_map[map_key] = package
-                
+
         for package in data_map.values():
             return_data.append(package)
 
         return return_data
+
+    def run_by_process(self, q_in: Queue, q_out: Queue):
+        while True:
+            if q_in.empty():
+                continue
+            data = q_in.get()
+
+            for package in data:
+                self.process_queue.push(package)
+
+            if self.process_queue.is_empty() or self.process_queue.delta_time() < self.time_slice + 1:
+                continue
+
+            packages = self.process_queue.get_time_slice(self.time_slice)
+
+            out_packages = self.process(packages)
+
+            for p in out_packages:
+                while q_out.full():
+                    time.sleep(0.1)
+                q_out.put(p)
