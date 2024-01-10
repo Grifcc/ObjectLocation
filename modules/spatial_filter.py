@@ -252,7 +252,9 @@ class SpatialFilter(Filter):
             if q_in.empty():
                 continue
             data = q_in.get()
-
+            if data == "exit":
+                q_out.put("exit")
+                break
             self.process_queue.push(data)
             if self.process_queue.is_empty() or self.process_queue.delta_time() < self.time_slice + 1:
                 continue
@@ -261,3 +263,4 @@ class SpatialFilter(Filter):
             while q_out.full():
                 time.sleep(0.1)
             q_out.put(out_packages[:])
+        print(f"{self.name} exit")

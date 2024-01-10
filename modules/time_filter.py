@@ -34,7 +34,9 @@ class TimeFilter(PreProcess):
             if q_in.empty():
                 continue
             data = q_in.get()
-
+            if data == "exit":
+                q_out.put("exit")
+                break
             for package in data:
                 self.process_queue.push(package)
 
@@ -49,3 +51,6 @@ class TimeFilter(PreProcess):
                 while q_out.full():
                     time.sleep(0.1)
                 q_out.put(p)
+                
+        print(f"{self.name} exit")
+        return 

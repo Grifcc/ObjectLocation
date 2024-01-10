@@ -58,6 +58,8 @@ class MQTTSource(Source):
 
     def process(self):
         objs = self.client.get_data()
+        if objs == "exit":
+            return "exit"
         if objs is None:
             return []
         packages = self.parse_msg.parse_msg(objs)
@@ -65,6 +67,10 @@ class MQTTSource(Source):
 
     def run_by_process(self,q_out: Queue):
         while True:
-            packages = self.process()
-            if packages != []:
-                q_out.put(packages)
+            data = self.process()
+            if  data == "exit":
+                q_out.put("exit")
+                break
+            if data != []:
+                q_out.put(data)
+        print(f"{self.name} exit")

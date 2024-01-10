@@ -47,10 +47,14 @@ class MOTracker(Tracker):
         while True:
             if q_in.empty():
                 continue
-            packages = q_in.get()
-            if len(packages) == 0:
+            data = q_in.get()
+            if data == "exit":
+                q_out.put("exit")
+                break
+            if len(data) == 0:
                 continue
 
-            packages = self.process(packages)
+            packages = self.process(data)
 
             q_out.put(packages)
+        print(f"{self.name} exit")

@@ -1,7 +1,7 @@
 from .__init__ import *
 from multiprocessing import Process, Queue
-
-
+import os
+import sys
 class Pipeline_mp:
     def __init__(self, modules):
         self.modules = modules
@@ -23,9 +23,12 @@ class Pipeline_mp:
     def run(self):
         for i in self.process_pool[1:]:
             i.start()
+        self.process_pool[0].run() 
+        return False
 
-        # for p in self.process_pool[1:]:
-        #     p.join()
-         
-        self.process_pool[0].run()   
-        print("All processes completed")
+    def stop(self):
+        for ms in self.modules:
+           for m in ms:
+               m.close()
+        print("All processes terminated")
+        sys.exit()

@@ -1,10 +1,9 @@
 import yaml
 import sys
 import os
+from keyboard import add_hotkey
 
 from framework.pipeline_mp import Pipeline_mp
-import signal
-from multiprocessing import Queue
 
 
 from modules import JsonSource, UDPSource, MQTTSource, MQTTLogSource
@@ -37,15 +36,9 @@ if __name__ == "__main__":
 
     pipe = Pipeline_mp(pipelines)
 
-    def signal_handler(signum, frame):
-        print(
-            "Ctrl+C detected. Closing socket. Exiting...")
-        pipelines[0].close()
-        pipelines[-1].close()
-        for i in pipe.process_pool:
-            i.terminate()
-        exit()
-
-    signal.signal(signal.SIGINT, signal_handler)
+    add_hotkey("esc", pipe.stop)
+    add_hotkey("q", pipe.stop)
+    add_hotkey("Q", pipe.stop)
+    add_hotkey(config["global"]["exit_key"], pipe.stop)
 
     pipe.run()

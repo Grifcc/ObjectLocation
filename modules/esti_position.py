@@ -61,9 +61,13 @@ class EstiPosition(Location):
                 continue
             data = q_in.get()
 
+            if data == "exit":
+                q_out.put("exit")
+                break
             self.process(data)
 
             while q_out.full():
                 time.sleep(0.1)
                 
             q_out.put(data)
+        print(f"{self.name} exit")

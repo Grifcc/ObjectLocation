@@ -185,5 +185,8 @@ class Module:
     def run(self):
         return NotImplementedError
 
+    def close(self):
+        pass
+    
     def __str__(self):
         return self.name

@@ -57,6 +57,8 @@ class HttpSink(Sink):
             if q_in.empty():
                 continue
             data = q_in.get()
+            if data == "exit":
+                break
             if len(data) == 0:
                 continue
             for package in data:
@@ -66,4 +68,4 @@ class HttpSink(Sink):
                 continue
             packages = self.process_queue.get_time_slice(0)
             self.process(packages)
-            
+        print(f"{self.name} exit")

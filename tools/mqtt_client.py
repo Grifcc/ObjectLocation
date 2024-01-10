@@ -97,3 +97,4 @@ class MqttClient:
         print("MQTT: connection close success!")
         self.log.close_record()
         print("MQTT: log close success!")
+        self.buffer = ["exit"]
