@@ -6,7 +6,7 @@ global:
   time_slice: &time_slice 1000 # 时间线融合, 可以调整, 单位ms
   enable_reloaction: &enable_reloaction False # 默认，不可修改
   order: &order "rzyx" # 固定参数
-  exit_key: "e" # 退出按键  内置有esc q Q 三个按键
+  exit_key: "e" # 退出按键,留给用户自定义  内置有esc q Q 三个按键
 
 pipeline:
   stage1:
@@ -43,7 +43,7 @@ pipeline:
 
   stage4:
     idx: 4
-    parallel: 4
+    parallel: 4  # 并行数，根据机器性能调整
     name: "EstiPosition"
     args:
       map_path: *map_path
