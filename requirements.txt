@@ -16,6 +16,7 @@ utm
 scipy
 lap
 filterpy
+keyboard
 
 #mesh-raycast
 git+https://github.com/szabolcsdombi/python-mesh-raycast.git
