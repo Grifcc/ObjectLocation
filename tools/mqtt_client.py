@@ -2,6 +2,7 @@ from paho.mqtt import client
 from .record_log import Log
 import time
 import json
+from data import UAV_LISTS
 
 class MqttClient:
     def __init__(self,
@@ -58,7 +59,7 @@ class MqttClient:
             json_data = eval(msg.payload.decode())
             sn_from_mqtt = json_data['sn']
 
-            if sn_from_mqtt not in self.topic_map:
+            if sn_from_mqtt not in self.topic_map and sn_from_mqtt in UAV_LISTS:
                 topic = f"thing/product/{sn_from_mqtt}/target_state"
                 self.topic_map[sn_from_mqtt] = topic
                 self.client.subscribe(topic, qos=self.qos)

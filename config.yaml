@@ -28,9 +28,9 @@ pipeline:
     name: "MOTracker"
     parallel: 1
     args:
-      max_age: 10 # 遗忘时间
+      max_age: 20 # 遗忘时间
       min_hits: 4 # 最小匹配次数
-      distance_threshold: 4 # 距离阈值
+      distance_threshold: 10 # 距离阈值
       max_queue_length: null
 
   stage3:
@@ -58,7 +58,7 @@ pipeline:
     parallel: 1
     args:
       time_slice: *time_slice
-      distance_threshold: 5.0 #多机融合距离阈值，两个目标不可以长时间在这个距离内相
+      distance_threshold: 10.0 #多机融合距离阈值，两个目标不可以长时间在这个距离内相
       max_map: 100
       max_queue_length: null
 

@@ -38,7 +38,6 @@ if __name__ == "__main__":
 
     add_hotkey("esc", pipe.stop)
     add_hotkey("q", pipe.stop)
-    add_hotkey("Q", pipe.stop)
     add_hotkey(config["global"]["exit_key"], pipe.stop)
 
     pipe.run()
